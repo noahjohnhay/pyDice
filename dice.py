@@ -1,7 +1,6 @@
 
 from actions import actions
 
-gameId=actions.fetchGame()["game-id"]
-
-
-print("Your Game Id id:",gameId)
+# gameId=actions.addPlayer("20db2f89-2746-43e7-b5d5-3b181e7f1498", "jon")
+gameId=actions.startGame("20db2f89-2746-43e7-b5d5-3b181e7f1498")
+print("Something here:", gameId)

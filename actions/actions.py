@@ -1,15 +1,27 @@
 import json
 import requests
 
-def startGame(): # return factorial
+def createGame():
     response=requests.post("http://dice.calinfraser.com/games")
     body=json.loads(response.content)
     print("response is:", response.status_code, ":",  body)
     return body
 
-
-def fetchGame(): # return factorial
-    response=requests.get("http://dice.calinfraser.com/games/20db2f89-2746-43e7-b5d5-3b181e7f1498")
+def fetchGame(gameId):
+    response=requests.get("http://dice.calinfraser.com/games/"+gameId)
     body=json.loads(response.content)
     print("response is:", response.status_code, ":",  body)
     return body
+
+def startGame(gameId):
+    response=requests.put("http://dice.calinfraser.com/games/"+gameId+"/start")
+    body=json.loads(response.content)
+    print("response is:", response.status_code, ":",  body)
+    return body
+
+def addPlayer(gameId, name):
+    response=requests.post("http://dice.calinfraser.com/games/"+gameId+"/players", json={'name': name})
+    body=json.loads(response.content)
+    print("response is:", response.status_code, ":",  body)
+    return body["player-id"]
+
