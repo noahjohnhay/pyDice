@@ -1,0 +1,30 @@
+# STARTING A GAME
+
+- Someone posts /create_game in slack
+- Bot response "@someone has started a game @here, who would like to join?"
+
+
+- Users click buttom to join or maybe /join gameid
+- Bot posts as users join, maybe in thread?
+
+- Person who created the game can run /start_game to start the game, can other join at this point?
+
+- Should we randomize the player order at this point before posting to dice10k api?
+
+# GAME HAS STARTED
+
+- Assign usernames to ids from dice10k
+
+- Bot posts that the game has begun
+
+- Bot posts in channel whos turn it is
+
+# User Rolls
+
+- Bot posts
+
+
+state to store
+1. game-> username
+2. ongoing games
+3.
