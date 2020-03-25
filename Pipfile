@@ -12,7 +12,6 @@ pytest-pythonpath = "*"
 [packages]
 requests = "*"
 flask = "*"
-pydblite = "*"
 
 [requires]
 python_version = "3.7"

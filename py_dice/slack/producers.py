@@ -51,12 +51,37 @@ def build_slack_message(roll_val, pronoun: str, pickable: bool, action: str = "r
     }
     if pickable:
         params["blocks"][0]["accessory"] = {
-            "action_id": "text1234",
+            "action_id": "pick_die",
             "type": "multi_static_select",
             "placeholder": {"type": "plain_text", "text": "Pick to keep"},
             "options": reduce(build_options, roll_val, []),
         }
     return params
+
+
+def join_game_survey(user):
+    params = {
+        "blocks": [
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": f'@{user} started a game, click to join:',
+                },
+                "accessory": {
+                    "action_id": "join_game",
+                    "type": "button",
+                    "text": {
+                        "type": "plain_text",
+                        "text": "Click to Join",
+                        "emoji": True
+                    },
+                    "value": "join_request"
+                }
+            }
+        ]
+    }
+    return send_requests(params)
 
 
 # def ask_for_players(game_requester: str):
@@ -81,4 +106,7 @@ def send_picks(picks: list, username: str):
 
 
 def send_requests(params: dict) -> requests.Response:
-    return requests.post("https://hooks.slack.com/services/*", json=params)
+    print(params)
+    jon = requests.post("https://hooks.slack.com/services/*", json=params)
+    print(jon)
+    return jon
