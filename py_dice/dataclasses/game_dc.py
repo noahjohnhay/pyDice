@@ -17,9 +17,7 @@ class Games:
     def add_user(self: Games, game_id: str, user_id: str) -> Games:
         if "users" not in self.games[game_id]:
             self.games[game_id]["users"] = []
-        self.games[game_id]["users"].append({
-            "user_id": user_id
-        })
+        self.games[game_id]["users"].append({"user_id": user_id})
         return self
 
 

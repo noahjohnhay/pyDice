@@ -36,7 +36,9 @@ def fetch_die_val(acc: list, x) -> list:
     return acc
 
 
-def build_slack_message(roll_val, pronoun: str, pickable: bool, action: str = "rolled"):
+def build_slack_message(
+    roll_val, pronoun: str, pickable: bool, action: str = "rolled"
+) -> dict:
     params = {
         "blocks": [
             {
@@ -59,14 +61,14 @@ def build_slack_message(roll_val, pronoun: str, pickable: bool, action: str = "r
     return params
 
 
-def join_game_survey(user):
+def join_game_survey(user: str) -> requests.Response:
     params = {
         "blocks": [
             {
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": f'@{user} started a game, click to join:',
+                    "text": f"@{user} started a game, click to join:",
                 },
                 "accessory": {
                     "action_id": "join_game",
@@ -74,10 +76,10 @@ def join_game_survey(user):
                     "text": {
                         "type": "plain_text",
                         "text": "Click to Join",
-                        "emoji": True
+                        "emoji": True,
                     },
-                    "value": "join_request"
-                }
+                    "value": "join_request",
+                },
             }
         ]
     }
@@ -99,14 +101,11 @@ def respond_slash_command(params: dict, username: str) -> requests.Response:
     return response
 
 
-def send_picks(picks: list, username: str):
+def send_picks(picks: list, username: str) -> requests.Response:
     roll = reduce(fetch_die_val, picks, [])
     params = build_slack_message(roll, f"@{username}", False, "picked")
     return send_requests(params)
 
 
 def send_requests(params: dict) -> requests.Response:
-    print(params)
-    jon = requests.post("https://hooks.slack.com/services/*", json=params)
-    print(jon)
-    return jon
+    return requests.post("https://hooks.slack.com/services/*", json=params)
