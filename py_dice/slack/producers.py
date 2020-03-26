@@ -36,7 +36,7 @@ def fetch_die_val(acc: list, x) -> list:
     return acc
 
 
-def build_slack_message(roll_val, pronoun: str, pickable: bool, action: str = "rolled"):
+def build_slack_message(roll_val: object, pronoun: object, pickable: object, action: object = "rolled") -> object:
     params = {
         "blocks": [
             {
@@ -59,28 +59,80 @@ def build_slack_message(roll_val, pronoun: str, pickable: bool, action: str = "r
     return params
 
 
-def join_game_survey(user):
+def build_join_response(username) -> dict:
+    params = {
+        "blocks": [
+            {
+                "type": "section",
+                "block_id": "{gameId}-{rand_val}",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": f'@{username} has successfuly joined the game'
+                }
+            }
+        ]
+    }
+    return params
+
+
+def join_game_survey(user, game_id):
     params = {
         "blocks": [
             {
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": f'@{user} started a game, click to join:',
-                },
-                "accessory": {
-                    "action_id": "join_game",
-                    "type": "button",
-                    "text": {
-                        "type": "plain_text",
-                        "text": "Click to Join",
-                        "emoji": True
-                    },
-                    "value": "join_request"
+                    "text": f'@{user} started a game, click to join:'
                 }
+            },
+            {
+                "type": "actions",
+                "elements": [
+
+                    {
+                        "type": "button",
+                        "action_id": "join_game",
+                        "text": {
+                            "type": "plain_text",
+                            "text": "Join Game"
+                        },
+                        "value": game_id
+                    },
+                    {
+                        "type": "button",
+                        "action_id": "start_game",
+
+                        "text": {
+                            "type": "plain_text",
+                            "text": "Start Game"
+
+                        },
+                        "style": "danger",
+                        "confirm": {
+                            "title": {
+                                "type": "plain_text",
+                                "text": "Has Everyone Joined?"
+                            },
+                            "text": {
+                                "type": "mrkdwn",
+                                "text": "dicks"
+                            },
+                            "confirm": {
+                                "type": "plain_text",
+                                "text": "Start Game NOW"
+                            },
+                            "deny": {
+                                "type": "plain_text",
+                                "text": "Calin is still not joined!"
+                            }
+                        },
+                        "value": game_id
+                    }
+                ]
             }
         ]
     }
+    print(params)
     return send_requests(params)
 
 
@@ -99,6 +151,13 @@ def respond_slash_command(params: dict, username: str) -> requests.Response:
     return response
 
 
+def respond_join(params: dict, message_ts: str, channel_id: str) -> requests.Response:
+    response = requests.post(
+        params["response_url"], json=build_join_response(message_ts, channel_id)
+    )
+    return response
+
+
 def send_picks(picks: list, username: str):
     roll = reduce(fetch_die_val, picks, [])
     params = build_slack_message(roll, f"@{username}", False, "picked")
@@ -108,5 +167,5 @@ def send_picks(picks: list, username: str):
 def send_requests(params: dict) -> requests.Response:
     print(params)
     jon = requests.post("https://hooks.slack.com/services/*", json=params)
-    print(jon)
+    print(jon.content)
     return jon
