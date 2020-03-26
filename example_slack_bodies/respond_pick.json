@@ -23,7 +23,7 @@
     "id": "C0107KZFHEV",
     "name": "spammyshit"
   },
-  "response_url": "https://hooks.slack.com/actions/TC58SJX1P/1023991183013/Sj6F0G16yeiFtYImtYPeCvz1",
+  "response_url": "https://hooks.slack.com/actions/*",
   "actions": [
     {
       "type": "multi_static_select",
