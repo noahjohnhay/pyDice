@@ -36,7 +36,9 @@ def fetch_die_val(acc: list, x) -> list:
     return acc
 
 
-def build_slack_message(roll_val: object, pronoun: object, pickable: object, action: object = "rolled") -> object:
+def build_slack_message(
+    roll_val: list, pronoun: str, pickable: bool, action: str = "rolled"
+) -> dict:
     params = {
         "blocks": [
             {
@@ -44,7 +46,7 @@ def build_slack_message(roll_val: object, pronoun: object, pickable: object, act
                 "block_id": "{gameId}-{rand_val}",
                 "text": {
                     "type": "mrkdwn",
-                    "text": f'{pronoun} {action}: {reduce(format_emojis, roll_val, "")}',
+                    "text": f"{pronoun} {action}: {reduce(format_emojis, roll_val, '')}",
                 },
             }
         ]
@@ -59,7 +61,7 @@ def build_slack_message(roll_val: object, pronoun: object, pickable: object, act
     return params
 
 
-def build_join_response(username) -> dict:
+def build_join_response(username: str) -> dict:
     params = {
         "blocks": [
             {
@@ -67,79 +69,58 @@ def build_join_response(username) -> dict:
                 "block_id": "{gameId}-{rand_val}",
                 "text": {
                     "type": "mrkdwn",
-                    "text": f'@{username} has successfuly joined the game'
-                }
+                    "text": f"@{username} has successfully joined the game",
+                },
             }
         ]
     }
     return params
 
 
-def join_game_survey(user, game_id):
+def join_game_survey(user: str, game_id: str):
     params = {
         "blocks": [
             {
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": f'@{user} started a game, click to join:'
-                }
+                    "text": f"@{user} started a game, click to join:",
+                },
             },
             {
                 "type": "actions",
                 "elements": [
-
                     {
                         "type": "button",
                         "action_id": "join_game",
-                        "text": {
-                            "type": "plain_text",
-                            "text": "Join Game"
-                        },
-                        "value": game_id
+                        "text": {"type": "plain_text", "text": "Join Game"},
+                        "value": game_id,
                     },
                     {
                         "type": "button",
                         "action_id": "start_game",
-
-                        "text": {
-                            "type": "plain_text",
-                            "text": "Start Game"
-
-                        },
+                        "text": {"type": "plain_text", "text": "Start Game"},
                         "style": "danger",
                         "confirm": {
                             "title": {
                                 "type": "plain_text",
-                                "text": "Has Everyone Joined?"
+                                "text": "Has Everyone Joined?",
                             },
-                            "text": {
-                                "type": "mrkdwn",
-                                "text": "dicks"
-                            },
-                            "confirm": {
-                                "type": "plain_text",
-                                "text": "Start Game NOW"
-                            },
+                            "text": {"type": "mrkdwn", "text": "dicks"},
+                            "confirm": {"type": "plain_text", "text": "Start Game NOW"},
                             "deny": {
                                 "type": "plain_text",
-                                "text": "Calin is still not joined!"
-                            }
+                                "text": "Calin is still not joined!",
+                            },
                         },
-                        "value": game_id
-                    }
-                ]
-            }
+                        "value": game_id,
+                    },
+                ],
+            },
         ]
     }
     print(params)
     return send_requests(params)
-
-
-# def ask_for_players(game_requester: str):
-#     params = ""
-#     send_requests()
-#     return
 
 
 def respond_slash_command(params: dict, username: str) -> requests.Response:
@@ -151,11 +132,8 @@ def respond_slash_command(params: dict, username: str) -> requests.Response:
     return response
 
 
-def respond_join(params: dict, message_ts: str, channel_id: str) -> requests.Response:
-    response = requests.post(
-        params["response_url"], json=build_join_response(message_ts, channel_id)
-    )
-    return response
+def respond_join(params: dict, message_ts: str) -> requests.Response:
+    return requests.post(params["response_url"], json=build_join_response(message_ts))
 
 
 def send_picks(picks: list, username: str):
@@ -165,7 +143,4 @@ def send_picks(picks: list, username: str):
 
 
 def send_requests(params: dict) -> requests.Response:
-    print(params)
-    jon = requests.post("https://hooks.slack.com/services/*", json=params)
-    print(jon.content)
-    return jon
+    return requests.post("https://hooks.slack.com/services/*", json=params)

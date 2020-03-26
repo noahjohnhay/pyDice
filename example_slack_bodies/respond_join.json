@@ -51,7 +51,7 @@
       }
     ]
   },
-  "response_url": "https://hooks.slack.com/actions/TC58SJX1P/1014228925505/Kwy41XKrUUmjg4c33ljldewP",
+  "response_url": "https://hooks.slack.com/actions/*",
   "actions": [
     {
       "action_id": "6jWYj",

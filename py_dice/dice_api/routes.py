@@ -4,28 +4,8 @@ import json
 
 from flask import Flask, request
 from py_dice import dice10k, slack
-import requests
 
 
-
-"""
-{
-   "token": "*",
-   "team_id": "TC58SJX1P",
-   "team_domain": "beefers",
-   "channel_id": "C0107KZFHEV",
-   "channel_name": "spammyshit",
-   "user_id": "ddfd",
-   "user_name": "jonathan.armel.daigle",
-   "command": "/roll",
-   "text": "",
-   "response_url": "https://hooks.slack.com/commands/*",
-   "trigger_id": ""
-}
-"""
-
-
-# JON DONT WRITE CODE ABOVE HERE
 def start_api():
     game_state = {}
     flask_app = Flask(__name__)
@@ -36,20 +16,18 @@ def start_api():
         username = request.form["user_name"]
         game_info = dice10k.manage.create_game()
         game_id = game_info["game-id"]
-        print(game_id)
         game_state[game_id] = {}
-        slack.producers.join_game_survey(username)
+        slack.producers.join_game_survey(username, game_id)
         return f"Created game {game_id}"
 
     @flask_app.route("/roll", methods=["POST"])
     def roll_route():
-        print(json.dumps(request.form))
         slack.producers.respond_slash_command(request.form, request.form["user_name"])
-        return "Logged."
+        return ""
 
     @flask_app.route("/action", methods=["POST"])
     def action_route():
-        action = json.loads(request.form["payload"])['actions'][0]["action_id"]
+        action = json.loads(request.form["payload"])["actions"][0]["action_id"]
 
         if action == "join_game":
             print(action)
@@ -58,14 +36,9 @@ def start_api():
             payload = json.loads(request.form["payload"])
             pick_list = payload["actions"][0]["selected_options"]
             slack.producers.send_picks(pick_list, payload["user"]["username"])
+        return ""
 
-
-        return "Logged."
-
-
-# test stuff
-
-
+    # test stuff
     @flask_app.route("/picknose", methods=["POST"])
     def pick_nose():
         print(game_state)
@@ -83,4 +56,3 @@ def start_api():
         return "true"
 
     flask_app.run()
-
