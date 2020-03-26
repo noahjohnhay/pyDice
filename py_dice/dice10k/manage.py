@@ -26,10 +26,19 @@ def start_game(game_id: str) -> dict:
     return body
 
 
-def add_player(game_id: str, name: str) -> str:
+def add_player(game_id: str, name: str) -> dict:
+    print(game_id)
+    print(name)
     response = requests.post(
         f"http://dice.calinfraser.com/games/{game_id}/players", json={"name": name}
     )
+    print(f"response is: {response.status_code}: {response.content}")
+    body = json.loads(response.content)
+    return body
+
+
+def roll(game_id: str, user_id: str) -> dict:
+    response = requests.put(f"http://dice.calinfraser.com/games/{game_id}/players/{user_id}/roll")
     body = json.loads(response.content)
     print(f"response is: {response.status_code}: {body}")
-    return body["player-id"]
+    return body

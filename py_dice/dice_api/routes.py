@@ -4,6 +4,8 @@ import json
 
 from flask import Flask, request
 from py_dice import dice10k, slack
+import requests
+
 
 
 """
@@ -47,7 +49,7 @@ def start_api():
 
     @flask_app.route("/action", methods=["POST"])
     def action_route():
-        action = json.loads(request.form["payload"])["actions"][0]["action_id"]
+        action = json.loads(request.form["payload"])['actions'][0]["action_id"]
 
         if action == "join_game":
             print(action)
@@ -56,9 +58,14 @@ def start_api():
             payload = json.loads(request.form["payload"])
             pick_list = payload["actions"][0]["selected_options"]
             slack.producers.send_picks(pick_list, payload["user"]["username"])
+
+
         return "Logged."
 
-    # test stuff
+
+# test stuff
+
+
     @flask_app.route("/picknose", methods=["POST"])
     def pick_nose():
         print(game_state)
@@ -76,3 +83,4 @@ def start_api():
         return "true"
 
     flask_app.run()
+
