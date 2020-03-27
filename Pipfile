@@ -10,8 +10,10 @@ pytest-env = "*"
 pytest-pythonpath = "*"
 
 [packages]
-requests = "*"
 flask = "*"
+logbook = "*"
+requests = "*"
+
 
 [requires]
 python_version = "3.7"

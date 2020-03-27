@@ -3,42 +3,48 @@
 import json
 
 import requests
+from logbook import Logger
+
+log = Logger(__name__)
 
 
 def create_game() -> dict:
-    response = requests.post("http://dice.calinfraser.com/games")
-    body = json.loads(response.content)
-    print(f"response is: {response.status_code}: {body}")
-    return body
+    response = json.loads(requests.post("http://dice.calinfraser.com/games").content)
+    log.debug(f"Create game response: {json.dumps(response, indent=2)}")
+    return response
 
 
 def fetch_game(game_id: str) -> dict:
-    response = requests.get(f"http://dice.calinfraser.com/games/{game_id}")
-    body = json.loads(response.content)
-    print(f"response is: {response.status_code}: {body}")
-    return body
+    response = json.loads(
+        requests.get(f"http://dice.calinfraser.com/games/{game_id}").content
+    )
+    log.debug(f"Fetch game response: {json.dumps(response, indent=2)}")
+    return response
 
 
 def start_game(game_id: str) -> dict:
-    response = requests.put(f"http://dice.calinfraser.com/games/{game_id}/start")
-    body = json.loads(response.content)
-    print(f"response is: {response.status_code}: {body}")
-    return body
+    response = json.loads(
+        requests.put(f"http://dice.calinfraser.com/games/{game_id}/start").content
+    )
+    log.debug(f"Start game response: {json.dumps(response, indent=2)}")
+    return response
 
 
 def add_player(game_id: str, name: str) -> dict:
-    print(game_id)
-    print(name)
-    response = requests.post(
-        f"http://dice.calinfraser.com/games/{game_id}/players", json={"name": name}
+    response = json.loads(
+        requests.post(
+            f"http://dice.calinfraser.com/games/{game_id}/players", json={"name": name}
+        ).content
     )
-    print(f"response is: {response.status_code}: {response.content}")
-    body = json.loads(response.content)
-    return body
+    log.debug(f"Add player response: {response}")
+    return response
 
 
 def roll(game_id: str, user_id: str) -> dict:
-    response = requests.put(f"http://dice.calinfraser.com/games/{game_id}/players/{user_id}/roll")
-    body = json.loads(response.content)
-    print(f"response is: {response.status_code}: {body}")
-    return body
+    response = json.loads(
+        requests.put(
+            f"http://dice.calinfraser.com/games/{game_id}/players/{user_id}/roll"
+        ).content
+    )
+    log.debug(f"Roll response: {response}")
+    return response
