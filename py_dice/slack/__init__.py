@@ -1,5 +1,5 @@
 # coding=utf-8
 
-__all__ = ["producers"]
+__all__ = ["actions", "producers"]
 
-from . import producers
+from . import actions, producers
