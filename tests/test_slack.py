@@ -1,4 +1,4 @@
-from py_dice.slack import producers
+from py_dice.slack_api import producers
 
 goodOptions = {
     "blocks": [

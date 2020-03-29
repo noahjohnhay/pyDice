@@ -1,5 +1,5 @@
 # coding=utf-8
 
-__all__ = ["dice10k", "dice_api", "slack"]
+__all__ = ["common", "dice10k", "dice_api", "slack_api"]
 
-from . import dice10k, dice_api, slack
+from . import common, dice10k, dice_api, slack_api

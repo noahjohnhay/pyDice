@@ -42,9 +42,21 @@ def add_player(game_id: str, name: str) -> dict:
 
 def roll(game_id: str, user_id: str) -> dict:
     response = json.loads(
-        requests.put(
+        requests.post(
             f"http://dice.calinfraser.com/games/{game_id}/players/{user_id}/roll"
         ).content
     )
     log.debug(f"Roll response: {response}")
+    return response
+
+
+def send_keepers(game_id: str, user_id: str, picks: list) -> dict:
+    log.info(f"{game_id} {user_id} {picks}")
+    response = json.loads(
+        requests.post(
+            f"http://dice.calinfraser.com/games/{game_id}/players/{user_id}/keep",
+            json={"keepers": picks},
+        ).content
+    )
+    log.info(f"Roll response: {response}")
     return response
