@@ -40,7 +40,10 @@ def start_api():
             return Response("", 200)
         elif action == "pass_dice":
             requests.post(payload["response_url"], json={"delete_original": True})
-            slack_api.actions.pass_dice()
+            game_id = payload["actions"][0]["value"]
+            slack_api.actions.pass_dice(
+                game_state[game_id], payload["user"]["username"]
+            )
             return Response("", 200)
         elif action == "pick_die":
             game_id = payload["actions"][0]["block_id"]

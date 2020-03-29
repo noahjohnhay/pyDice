@@ -13,7 +13,7 @@ log = Logger(__name__)
 def join_game(game_state: dict, payload: dict) -> dict:
     log.debug("Action: Joined game")
     game_id = payload["actions"][0]["value"]
-    log.info(payload)
+    log.debug(payload)
     username = payload["user"]["username"]
     if username not in game_state[game_id]["users"]:
         game_state[game_id]["users"][username] = {
@@ -27,8 +27,12 @@ def join_game(game_state: dict, payload: dict) -> dict:
     return game_state
 
 
-def pass_dice():
-    log.debug("Action: Passed dice")
+def pass_dice(game_info: dict, username):
+    response = dice10k.manage.pass_turn(
+        game_info["game_id"], game_info["users"][username]["user_id"]
+    )
+    log.debug(response)
+    # slack_api.producers.respond_roll(game_info, response["turn-player"])
     return
 
 
@@ -40,6 +44,7 @@ def pick_dice(payload: dict, game_dict: dict):
     response = dice10k.manage.send_keepers(
         game_dict["game_id"], game_dict["users"][username]["user_id"], roll
     )
+    log.error(response)
 
     if response["message"] == "Must pick at least one scoring die":
         requests.post(
@@ -64,13 +69,14 @@ def pick_dice(payload: dict, game_dict: dict):
             f"Pending Points: {response['pending-points']}\n"
             f"Remaining Dice: {response['game-state']['pending-dice']}",
         )
-        slack_api.producers.pass_roll_survey(game_dict, username)
+        #TODO :noah here we add it here. auto response
+        slack_api.producers.pass_roll_survey(game_dict, username, payload, response)
     return
 
 
 def roll_dice(game_info, username):
 
-    log.info("Action: rolled dice")
+    log.debug("Action: rolled dice")
     slack_api.producers.respond_roll(game_info, username)
     return
 

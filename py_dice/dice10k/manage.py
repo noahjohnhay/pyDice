@@ -51,12 +51,22 @@ def roll(game_id: str, user_id: str) -> dict:
 
 
 def send_keepers(game_id: str, user_id: str, picks: list) -> dict:
-    log.info(f"{game_id} {user_id} {picks}")
+    log.debug(f"{game_id} {user_id} {picks}")
     response = json.loads(
         requests.post(
             f"http://dice.calinfraser.com/games/{game_id}/players/{user_id}/keep",
             json={"keepers": picks},
         ).content
     )
-    log.info(f"Roll response: {response}")
+    log.debug(f"keep response: {response}")
+    return response
+
+
+def pass_turn(game_id: str, user_id: str) -> dict:
+    response = json.loads(
+        requests.post(
+            f"http://dice.calinfraser.com/games/{game_id}/players/{user_id}/pass"
+        ).content
+    )
+    log.debug(f"pass response: {response}")
     return response

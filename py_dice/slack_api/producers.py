@@ -72,7 +72,7 @@ def respond_in_thread(game_dict: dict, text: str) -> dict:
     return params
 
 
-def pass_roll_survey(game_info: dict, username: str):
+def pass_roll_survey(game_info: dict, username: str, payload: dict, response: dict):
     params = {
         "blocks": [
             {
@@ -90,13 +90,7 @@ def pass_roll_survey(game_info: dict, username: str):
                         "action_id": "roll_dice",
                         "text": {"type": "plain_text", "text": "Roll"},
                         "value": game_info["game_id"],
-                    },
-                    {
-                        "type": "button",
-                        "action_id": "pass_dice",
-                        "text": {"type": "plain_text", "text": "Pass"},
-                        "value": game_info["game_id"],
-                    },
+                    }
                 ],
             },
         ],
@@ -104,6 +98,18 @@ def pass_roll_survey(game_info: dict, username: str):
         "thread_ts": game_info["message_ts"],
         "user": game_info["users"][username]["slack_id"],
     }
+    if (
+        game_info["users"][username].get("broken_ice", False)
+        or response.get("pending-points", 0) >= 1000
+    ):
+        params["blocks"][1]["elements"].append(
+            {
+                "type": "button",
+                "action_id": "pass_dice",
+                "text": {"type": "plain_text", "text": "Pass"},
+                "value": game_info["game_id"],
+            }
+        )
     log.debug(json.dumps(params, indent=2))
     return client.chat_postEphemeral(**params)
 
@@ -158,16 +164,30 @@ def respond_roll(game_dict: dict, username):
     log.debug(json.dumps(roll_response, indent=2))
     roll = roll_response["roll"]
     if roll_response["message"] == "Pick Keepers!":
-        action = "rolled"
-        pickable = True
+        blah(game_dict, username, "rolled", roll)
+        client.chat_postEphemeral(
+            **build_slack_message(
+                roll,
+                f"You rolled: {common.format_dice_emojis(roll)}",
+                True,
+                game_dict,
+                username,
+            )
+        )
     elif roll_response["message"] == "You Busted!":
-        action = "BUSTED!"
-        pickable = False
+        next_player = roll_response["game-state"]["turn-player"]
+        blah(game_dict, username, "BUSTED!", roll)
+        respond_roll(game_dict, next_player)
     else:
         respond_in_thread(
             game_dict, "We encountered and error, Please try another time"
         )
         return log.error("The API returned an unknown message for your roll")
+
+    return ""
+
+
+def blah(game_dict, username, action, roll):
     send_message(
         build_slack_message(
             roll,
@@ -177,15 +197,6 @@ def respond_roll(game_dict: dict, username):
             username,
         )
     )
-    body = build_slack_message(
-        roll,
-        f"You {action}: {common.format_dice_emojis(roll)}",
-        pickable,
-        game_dict,
-        username,
-    )
-    client.chat_postEphemeral(**body)
-    return ""
 
 
 def send_message(params: dict) -> requests.Response:
