@@ -32,20 +32,27 @@ def pass_dice(game_info: dict, username):
         game_info["game_id"], game_info["users"][username]["user_id"]
     )
     log.debug(response)
-    # slack_api.producers.respond_roll(game_info, response["turn-player"])
+    slack_api.producers.respond_roll(game_info, response["game-state"]["turn-player"])
     return
 
 
-def pick_dice(payload: dict, game_dict: dict):
+def pick_dice(payload: dict, game_info: dict):
     log.debug("Action: Picked dice")
     username = payload["user"]["username"]
     roll = reduce(common.fetch_die_val, payload["actions"][0]["selected_options"], [])
 
     response = dice10k.manage.send_keepers(
-        game_dict["game_id"], game_dict["users"][username]["user_id"], roll
+        game_info["game_id"], game_info["users"][username]["user_id"], roll
     )
-    log.error(response)
-
+    log.info(response)
+    ice_broken = False
+    for x in response['game-state']['players']:
+        log.info(x)
+        if x['name'] == username:
+            log.info("found ice state")
+            ice_broken = x['ice-broken?']
+            current_points = x['points']
+            break
     if response["message"] == "Must pick at least one scoring die":
         requests.post(
             payload["response_url"],
@@ -53,7 +60,7 @@ def pick_dice(payload: dict, game_dict: dict):
                 response["roll"],
                 f'{response["message"]}, try again: {common.format_dice_emojis(response["roll"])}',
                 True,
-                game_dict,
+                game_info,
                 username,
             ),
         )
@@ -63,14 +70,20 @@ def pick_dice(payload: dict, game_dict: dict):
             reduce(common.fetch_die_val, payload["actions"][0]["selected_options"], [])
         )
         slack_api.producers.respond_in_thread(
-            game_dict,
+            game_info,
             f"@{username}\n"
             f"Picked: {roll}\n"
-            f"Pending Points: {response['pending-points']}\n"
-            f"Remaining Dice: {response['game-state']['pending-dice']}",
+            f"Pending Points: {response['pending-points']}, Current Points {current_points}\n"
+            f"Remaining Dice: {response['game-state']['pending-dice']}\n"
+            f"Ice Broken: {ice_broken}",
         )
-        #TODO :noah here we add it here. auto response
-        slack_api.producers.pass_roll_survey(game_dict, username, payload, response)
+        if not (
+                ice_broken
+                or response.get("pending-points", 0) >= 1000
+        ):
+            roll_dice(game_info, username)
+        else:
+            slack_api.producers.pass_roll_survey(game_info, username, payload, response, ice_broken)
     return
 
 

@@ -72,7 +72,7 @@ def respond_in_thread(game_dict: dict, text: str) -> dict:
     return params
 
 
-def pass_roll_survey(game_info: dict, username: str, payload: dict, response: dict):
+def pass_roll_survey(game_info: dict, username: str, payload: dict, response: dict, ice_broken: bool):
     params = {
         "blocks": [
             {
@@ -99,7 +99,7 @@ def pass_roll_survey(game_info: dict, username: str, payload: dict, response: di
         "user": game_info["users"][username]["slack_id"],
     }
     if (
-        game_info["users"][username].get("broken_ice", False)
+        ice_broken
         or response.get("pending-points", 0) >= 1000
     ):
         params["blocks"][1]["elements"].append(
