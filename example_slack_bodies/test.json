@@ -1,0 +1,27 @@
+{
+  "blocks": [
+    {
+      "type": "section",
+      "block_id": "game_id",
+      "text": {
+        "type": "mrkdwn",
+        "text": "test_message"
+      }
+    },
+    {
+      "type": "actions",
+      "elements": [
+        {
+          "action_id": "pick_die",
+          "type": "multi_static_select",
+          "placeholder": { "type": "plain_text", "text": "Pick to keep" },
+          "options": {
+            "text": { "type": "plain_text", "text": ":die{die_number}:" },
+            "value": "value-{len(options) + 1}"
+          }
+        }
+      ]
+    }
+  ],
+  "channel": "channel_id"
+}

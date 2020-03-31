@@ -15,14 +15,14 @@ client = slack.WebClient(token=slack_token)
 log.debug("STARTING THE CLIENT AGAIN")
 
 
-def build_options(acc: list, x: int) -> list:
-    acc.append(
+def build_options(options: list, die_number: int) -> list:
+    options.append(
         {
-            "text": {"type": "plain_text", "text": f":die{x}:"},
-            "value": f"value-{len(acc) + 1}",
+            "text": {"type": "plain_text", "text": f":die{die_number}:"},
+            "value": f"value-{len(options) + 1}",
         }
     )
-    return acc
+    return options
 
 
 def build_slack_message(
