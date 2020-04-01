@@ -1,6 +1,5 @@
 # coding=utf-8
 
-import json
 import os
 from functools import reduce
 
@@ -27,21 +26,19 @@ def build_options(acc: list, x: int) -> list:
 
 
 def build_slack_message(
-    roll_val: list, message: str, pickable: bool, game_dict: dict, username: str
+    roll_val: list, message: str, pickable: bool, game_info: dict, username: str
 ) -> dict:
-    log.debug(game_dict["game_id"])
-
     params = {
         "blocks": [
             {
                 "type": "section",
-                "block_id": game_dict["game_id"],
+                "block_id": game_info["game_id"],
                 "text": {"type": "mrkdwn", "text": message},
             }
         ],
-        "channel": game_dict["channel"],
-        "thread_ts": game_dict["message_ts"],
-        "user": game_dict["users"][username]["slack_id"],
+        "channel": game_info["channel"],
+        "thread_ts": game_info["message_ts"],
+        "user": game_info["users"][username]["slack_id"],
         "accessory": {},
     }
     if pickable:
@@ -51,28 +48,34 @@ def build_slack_message(
             "placeholder": {"type": "plain_text", "text": "Pick to keep"},
             "options": reduce(build_options, roll_val, []),
         }
-    log.debug(json.dumps(params, indent=2))
     return params
 
 
-def respond_in_thread(game_dict: dict, text: str) -> dict:
+def respond_in_thread(game_info: dict, message: str) -> dict:
+    """
+    Description:
+        Post message in thread
+    Args:
+        game_info: dict
+        message: str
+    Returns
+        dict - Response content from posting the message
+    """
     params = {
         "blocks": [
             {
                 "type": "section",
-                "block_id": game_dict["game_id"],
-                "text": {"type": "mrkdwn", "text": text},
+                "block_id": game_info["game_id"],
+                "text": {"type": "mrkdwn", "text": message},
             }
         ],
-        "channel": game_dict["channel"],
-        "thread_ts": game_dict["message_ts"],
+        "channel": game_info["channel"],
+        "thread_ts": game_info["message_ts"],
     }
-    log.debug(json.dumps(params, indent=2))
-    send_message(params)
-    return params
+    return send_message(params)
 
 
-def pass_roll_survey(game_info: dict, username: str, payload: dict, response: dict, ice_broken: bool):
+def pass_roll_survey(game_info: dict, username: str, response: dict, ice_broken: bool):
     params = {
         "blocks": [
             {
@@ -98,10 +101,7 @@ def pass_roll_survey(game_info: dict, username: str, payload: dict, response: di
         "thread_ts": game_info["message_ts"],
         "user": game_info["users"][username]["slack_id"],
     }
-    if (
-        ice_broken
-        or response.get("pending-points", 0) >= 1000
-    ):
+    if ice_broken or response.get("pending-points", 0) >= 1000:
         params["blocks"][1]["elements"].append(
             {
                 "type": "button",
@@ -110,18 +110,26 @@ def pass_roll_survey(game_info: dict, username: str, payload: dict, response: di
                 "value": game_info["game_id"],
             }
         )
-    log.debug(json.dumps(params, indent=2))
     return client.chat_postEphemeral(**params)
 
 
-def join_game_survey(user, game_id):
+def join_game_survey(game_id: str, username: str) -> dict:
+    """
+    Description:
+        Ask players to join the game
+    Args:
+        game_id: str
+        username: str
+    Returns:
+        dict - Response content from posting the message
+    """
     params = {
         "blocks": [
             {
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": f"@{user} started a game, click to join:",
+                    "text": f"@{username} started a game, click to join:",
                 },
             },
             {
@@ -153,41 +161,39 @@ def join_game_survey(user, game_id):
             },
         ]
     }
-    log.debug(json.dumps(params, indent=2))
     return send_message(params)
 
 
-def respond_roll(game_dict: dict, username):
-    roll_response = dice10k.manage.roll(
-        game_dict["game_id"], game_dict["users"][username]["user_id"]
+def respond_roll(game_info: dict, username: str):
+    roll_response = dice10k.roll(
+        game_info["game_id"], game_info["users"][username]["user_id"]
     )
-    log.debug(json.dumps(roll_response, indent=2))
     roll = roll_response["roll"]
     if roll_response["message"] == "Pick Keepers!":
-        blah(game_dict, username, "rolled", roll)
+        blah(game_info, username, "rolled", roll)
         client.chat_postEphemeral(
             **build_slack_message(
                 roll,
                 f"You rolled: {common.format_dice_emojis(roll)}",
                 True,
-                game_dict,
+                game_info,
                 username,
             )
         )
     elif roll_response["message"] == "You Busted!":
         next_player = roll_response["game-state"]["turn-player"]
-        blah(game_dict, username, "BUSTED!", roll)
-        respond_roll(game_dict, next_player)
+        blah(game_info, username, "BUSTED!", roll)
+        respond_roll(game_info=game_info, username=next_player)
     else:
         respond_in_thread(
-            game_dict, "We encountered and error, Please try another time"
+            game_info=game_info,
+            message="We encountered and error, Please try another time",
         )
-        return log.error("The API returned an unknown message for your roll")
-
+        log.error("The API returned an unknown message for your roll")
     return ""
 
 
-def blah(game_dict, username, action, roll):
+def blah(game_dict: dict, username: str, action: str, roll):
     send_message(
         build_slack_message(
             roll,
@@ -199,7 +205,7 @@ def blah(game_dict, username, action, roll):
     )
 
 
-def send_message(params: dict) -> requests.Response:
-    response = requests.post(os.environ["slack_url"], json=params)
+def send_message(params: dict) -> dict:
+    response = requests.post(url=os.environ["slack_url"], json=params).content
     log.debug(response.content)
     return response

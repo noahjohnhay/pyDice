@@ -3,7 +3,7 @@
 import sys
 
 from logbook import Logger, StreamHandler, compat
-from py_dice.dice_api import routes
+from py_dice import routes
 
 if __name__ == "__main__":
     log = Logger(__name__)
