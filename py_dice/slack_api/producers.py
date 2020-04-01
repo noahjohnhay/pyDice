@@ -164,13 +164,13 @@ def join_game_survey(game_id: str, username: str) -> dict:
     return send_message(params)
 
 
-def respond_roll(game_info: dict, username: str):
+def roll_with_player_message(game_info: dict, username: str):
     roll_response = dice10k.roll(
         game_info["game_id"], game_info["users"][username]["user_id"]
     )
     roll = roll_response["roll"]
     if roll_response["message"] == "Pick Keepers!":
-        blah(game_info, username, "rolled", roll)
+        send_roll_message(game_info, username, "rolled", roll)
         client.chat_postEphemeral(
             **build_slack_message(
                 roll,
@@ -182,8 +182,8 @@ def respond_roll(game_info: dict, username: str):
         )
     elif roll_response["message"] == "You Busted!":
         next_player = roll_response["game-state"]["turn-player"]
-        blah(game_info, username, "BUSTED!", roll)
-        respond_roll(game_info=game_info, username=next_player)
+        send_roll_message(game_info, username, "BUSTED!", roll)
+        roll_with_player_message(game_info=game_info, username=next_player)
     else:
         respond_in_thread(
             game_info=game_info,
@@ -193,7 +193,7 @@ def respond_roll(game_info: dict, username: str):
     return ""
 
 
-def blah(game_dict: dict, username: str, action: str, roll):
+def send_roll_message(game_dict: dict, username: str, action: str, roll):
     send_message(
         build_slack_message(
             roll,
@@ -212,7 +212,7 @@ def send_message(params: dict) -> dict:
 
 def update_parent_message(title_message_url: str, game_id):
     # list of users and their current scores
-    # username: blah
+    # username: send_roll_message
     # current score
     current_game_info = dice10k.fetch_game(game_id)
     log.error(current_game_info)
@@ -220,7 +220,7 @@ def update_parent_message(title_message_url: str, game_id):
     for user in current_game_info["players"]:
         string = f"{user['name']}'s score: {user['points']}"
         if user["ice-broken?"]:
-            string += f": ICE BROKEN!"
+            string += f": *ICE BROKEN!*"
         user_str += f"{string}\n"
     requests.post(
         title_message_url,

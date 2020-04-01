@@ -39,7 +39,7 @@ def pass_dice(game_info: dict, response_url: str, username: str) -> None:
     response = dice10k.pass_turn(
         game_id=game_info["game_id"], user_id=game_info["users"][username]["user_id"]
     )
-    slack_api.producers.respond_roll(game_info, response["game-state"]["turn-player"])
+    slack_api.producers.roll_with_player_message(game_info, response["game-state"]["turn-player"])
     slack_api.producers.update_parent_message(
         game_info["title_message_url"], game_info["game_id"]
     )
@@ -99,7 +99,7 @@ def roll_dice(game_info: dict, response_url: str, username: str) -> None:
     """
     log.debug("Action: Rolled Dice")
     requests.post(url=response_url, json={"delete_original": True})
-    slack_api.producers.respond_roll(game_info=game_info, username=username)
+    slack_api.producers.roll_with_player_message(game_info=game_info, username=username)
     return None
 
 
@@ -111,5 +111,5 @@ def start_game(game_info: dict, response_url: str):
     log.debug(f"Start game response: {json.dumps(start_response, indent=2)}")
     game_info["title_message_url"] = response_url
     slack_api.producers.update_parent_message(response_url, game_info["game_id"])
-    slack_api.producers.respond_roll(game_info, turn_player)
+    slack_api.producers.roll_with_player_message(game_info, turn_player)
     return game_info
