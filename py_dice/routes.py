@@ -64,9 +64,11 @@ def start_api():
             return Response("", 200)
 
         elif action == "start_game":
-            slack_api.actions.start_game(
-                game_info=game_state[payload["actions"][0]["value"]],
-                response_url=payload["response_url"],
+            game_id = payload["actions"][0]["value"]
+            game_state[game_id].update(
+                slack_api.actions.start_game(
+                    game_info=game_state[game_id], response_url=payload["response_url"]
+                )
             )
             return Response("", 200)
 

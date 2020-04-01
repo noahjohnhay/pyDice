@@ -207,5 +207,29 @@ def blah(game_dict: dict, username: str, action: str, roll):
 
 def send_message(params: dict) -> dict:
     response = requests.post(url=os.environ["slack_url"], json=params).content
-    log.debug(response.content)
     return response
+
+
+def update_parent_message(title_message_url: str, game_id):
+    # list of users and their current scores
+    # username: blah
+    # current score
+    current_game_info = dice10k.fetch_game(game_id)
+    log.error(current_game_info)
+    user_str = ""
+    for user in current_game_info["players"]:
+        string = f"{user['name']}'s score: {user['points']}"
+        if user["ice-broken?"]:
+            string += f": ICE BROKEN!"
+        user_str += f"{string}\n"
+    requests.post(
+        title_message_url,
+        json={
+            "replace_original": "true",
+            "type": "mrkdwn",
+            "text": "*=====================================*\n"
+            "*Game has started, follow in thread from now on*\n"
+            f"{user_str}"
+            "*=====================================*",
+        },
+    )

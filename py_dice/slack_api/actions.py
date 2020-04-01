@@ -40,6 +40,9 @@ def pass_dice(game_info: dict, response_url: str, username: str) -> None:
         game_id=game_info["game_id"], user_id=game_info["users"][username]["user_id"]
     )
     slack_api.producers.respond_roll(game_info, response["game-state"]["turn-player"])
+    slack_api.producers.update_parent_message(
+        game_info["title_message_url"], game_info["game_id"]
+    )
     return None
 
 
@@ -50,13 +53,6 @@ def pick_dice(game_info: dict, response_url: str, username: str, payload: dict):
         game_info["game_id"], game_info["users"][username]["user_id"], roll
     )
     ice_broken = False
-    for x in response["game-state"]["players"]:
-        log.info(x)
-        if x["name"] == username:
-            log.info("found ice state")
-            ice_broken = x["ice-broken?"]
-            current_points = x["points"]
-            break
     if response["message"] == "Must pick at least one scoring die":
         requests.post(
             url=response_url,
@@ -77,10 +73,10 @@ def pick_dice(game_info: dict, response_url: str, username: str, payload: dict):
             game_info,
             f"@{username}\n"
             f"Picked: {roll}\n"
-            f"Pending Points: {response['pending-points']}, Current Points {current_points}\n"
-            f"Remaining Dice: {response['game-state']['pending-dice']}\n"
-            f"Ice Broken: {ice_broken}",
+            f"Pending Points: {response['pending-points']}\n"
+            f"Remaining Dice: {response['game-state']['pending-dice']}\n",
         )
+
         if not (ice_broken or response.get("pending-points", 0) >= 1000):
             roll_dice(game_info=game_info, response_url=response_url, username=username)
         else:
@@ -113,15 +109,7 @@ def start_game(game_info: dict, response_url: str):
     turn_player = start_response["turn-player"]
     log.debug(f"Its this players turn: {turn_player}")
     log.debug(f"Start game response: {json.dumps(start_response, indent=2)}")
-    requests.post(
-        url=response_url,
-        json={
-            "replace_original": "true",
-            "type": "mrkdwn",
-            "text": "*=====================================*\n"
-            "*Game has started, follow in thread from now on*\n"
-            "*=====================================*",
-        },
-    )
+    game_info["title_message_url"] = response_url
+    slack_api.producers.update_parent_message(response_url, game_info["game_id"])
     slack_api.producers.respond_roll(game_info, turn_player)
-    return
+    return game_info
