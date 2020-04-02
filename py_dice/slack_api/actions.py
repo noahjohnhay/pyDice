@@ -62,15 +62,14 @@ def pick_dice(game_info: dict, response_url: str, username: str, payload: dict):
     )
     ice_broken = False
     if response["message"] == "Must pick at least one scoring die":
-        requests.post(
-            url=response_url,
-            json=slack_api.bodies.build_slack_message(
+        client.chat_postMessage(
+            **slack_api.bodies.build_slack_message(
                 response["roll"],
                 f'{response["message"]}, try again: {common.format_dice_emojis(response["roll"])}',
                 True,
                 game_info,
                 username,
-            ),
+            )
         )
     else:
         requests.post(url=response_url, json={"delete_original": True})
