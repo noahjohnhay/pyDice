@@ -1,4 +1,4 @@
-from py_dice.slack_api import producers
+from py_dice import slack_api
 
 goodOptions = {
     "blocks": [
@@ -46,4 +46,7 @@ goodOptions = {
 
 
 def test_matchers():
-    assert producers.build_slack_message([1, 2, 3, 4, 4, 6], "You", True) == goodOptions
+    assert (
+        slack_api.bodies.build_slack_message([1, 2, 3, 4, 4, 6], "You", True)
+        == goodOptions
+    )
