@@ -2,6 +2,8 @@
 
 from functools import reduce
 
+from py_dice import dice10k
+
 
 def build_options(acc: list, x: int) -> list:
     acc.append(
@@ -25,7 +27,7 @@ def build_slack_message(
             }
         ],
         "channel": game_info["channel"],
-        "thread_ts": game_info["message_ts"],
+        "thread_ts": game_info["parent_message_ts"],
         "user": game_info["users"][username]["slack_id"],
         "accessory": {},
     }
@@ -107,7 +109,7 @@ def pass_roll_survey(
             },
         ],
         "channel": game_info["channel"],
-        "thread_ts": game_info["message_ts"],
+        "thread_ts": game_info["parent_message_ts"],
         "user": game_info["users"][username]["slack_id"],
     }
     if ice_broken or response.get("pending-points", 0) >= 1000:
@@ -141,6 +143,33 @@ def respond_in_thread(game_info: dict, message: str) -> dict:
             }
         ],
         "channel": game_info["channel"],
-        "thread_ts": game_info["message_ts"],
+        "thread_ts": game_info["parent_message_ts"],
+    }
+    return params
+
+
+def update_parent_message(game_info: dict) -> dict:
+    current_game_info = dice10k.fetch_game(game_info["game_id"])
+    scoreboard = ""
+    for user in current_game_info["players"]:
+        string = f"{user['name']}'s score: {user['points']}"
+        if user["ice-broken?"]:
+            string += f": *ICE BROKEN!*"
+        scoreboard += f"{string}\n"
+    params = {
+        "blocks": [
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": "*=====================================*\n"
+                    "*Game has started, follow in thread from now on*\n"
+                    f"{scoreboard}"
+                    "*=====================================*",
+                },
+            }
+        ],
+        "channel": game_info["channel"],
+        "ts": game_info["parent_message_ts"],
     }
     return params

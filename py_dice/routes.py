@@ -22,17 +22,17 @@ def start_api():
     @flask_app.route("/create", methods=["POST"])
     def create_game() -> Response:
         username = request.form["user_name"]
-        payload = json.loads(request.form["payload"])
         game_id = dice10k.create_game()["game-id"]
         game_state[game_id] = {"game_id": game_id, "users": {}}
-        game_state[game_id]["channel"] = payload["channel"]["id"]
-        client.chat_postMessage(
+        game_state[game_id]["channel"] = request.form["channel_id"]
+        response = client.chat_postMessage(
             **slack_api.bodies.join_game_survey(
                 channel_id=game_state[game_id]["channel"],
                 game_id=game_id,
                 username=username,
             )
         )
+        game_state[game_id]["parent_message_ts"] = response["ts"]
         return Response("", 200)
 
     @flask_app.route("/action", methods=["POST"])

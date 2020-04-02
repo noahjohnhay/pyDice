@@ -50,9 +50,7 @@ def pass_dice(game_info: dict, response_url: str, username: str) -> None:
     slack_api.producers.roll_with_player_message(
         game_info, response["game-state"]["turn-player"]
     )
-    slack_api.producers.update_parent_message(
-        game_info["title_message_url"], game_info["game_id"]
-    )
+    client.chat_update(**slack_api.bodies.update_parent_message(game_info))
     return None
 
 
@@ -127,6 +125,9 @@ def start_game(game_info: dict, response_url: str):
     log.debug(f"Its this players turn: {turn_player}")
     log.debug(f"Start game response: {json.dumps(start_response, indent=2)}")
     game_info["title_message_url"] = response_url
-    slack_api.producers.update_parent_message(response_url, game_info["game_id"])
+    response = client.chat_update(
+        **slack_api.bodies.update_parent_message(game_info=game_info)
+    )
+    log.error(response)
     slack_api.producers.roll_with_player_message(game_info, turn_player)
     return game_info

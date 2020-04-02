@@ -45,8 +45,8 @@ goodOptions = {
 }
 
 
-def test_matchers():
-    assert (
-        slack_api.bodies.build_slack_message([1, 2, 3, 4, 4, 6], "You", True)
-        == goodOptions
-    )
+# def test_matchers():
+#     assert (
+#         slack_api.bodies.build_slack_message([1, 2, 3, 4, 4, 6], "You", True)
+#         == goodOptions
+#     )
