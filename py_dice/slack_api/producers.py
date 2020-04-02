@@ -46,8 +46,8 @@ def roll_with_player_message(game_info: dict, username: str):
 
 
 def send_roll_message(game_dict: dict, username: str, action: str, roll):
-    send_message(
-        slack_api.bodies.build_slack_message(
+    client.chat_postMessage(
+        **slack_api.bodies.build_slack_message(
             roll,
             f"@{username} {action}: {common.format_dice_emojis(roll)}",
             False,
@@ -55,8 +55,3 @@ def send_roll_message(game_dict: dict, username: str, action: str, roll):
             username,
         )
     )
-
-
-def send_message(params: dict) -> dict:
-    response = requests.post(url=os.environ["slack_url"], json=params).content
-    return response
