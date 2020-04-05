@@ -13,9 +13,9 @@ client = slack.WebClient(token=slack_token)
 log.debug("STARTING THE CLIENT AGAIN")
 
 
-def roll_with_player_message(game_info: dict, username: str):
+def roll_with_player_message(game_info: dict, username: str, steal: bool = False):
     roll_response = dice10k.roll(
-        game_info["game_id"], game_info["users"][username]["user_id"]
+        game_info["game_id"], game_info["users"][username]["user_id"], steal
     )
     roll = roll_response["roll"]
     if roll_response["message"] == "Pick Keepers!":

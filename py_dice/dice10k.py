@@ -40,24 +40,18 @@ def add_player(game_id: str, name: str) -> dict:
     return response
 
 
-def roll(game_id: str, user_id: str) -> dict:
-    response = json.loads(
-        requests.post(
-            f"http://dice.calinfraser.com/games/{game_id}/players/{user_id}/roll"
-        ).content
-    )
-    log.debug(f"Roll response: {response}")
-    return response
-
-
-def steal(game_id: str, user_id: str) -> dict:
+def roll(game_id: str, user_id: str, steal: bool) -> dict:
+    if steal:
+        payload = {"steal": True}
+    else:
+        payload = {}
     response = json.loads(
         requests.post(
             f"http://dice.calinfraser.com/games/{game_id}/players/{user_id}/roll",
-            json={"steal": True},
+            json=payload,
         ).content
     )
-    log.debug(f"Steal response: {response}")
+    log.debug(f"Roll response: {response}")
     return response
 
 

@@ -102,6 +102,12 @@ def pick_dice(game_info: dict, response_url: str, username: str, payload: dict):
         game_info["game_id"], game_info["users"][username]["user_id"], roll
     )
     ice_broken = False
+    for x in response["game-state"]["players"]:
+        log.info(x)
+        if x["name"] == username:
+            log.info("found ice state")
+            ice_broken = x["ice-broken?"]
+            break
     if response["message"] == "Must pick at least one scoring die":
         client.chat_postMessage(
             **slack_api.bodies.build_slack_message(
@@ -154,6 +160,7 @@ def roll_dice(game_info: dict, response_url: str, username: str) -> None:
         None
     """
     log.debug("Action: Rolled Dice")
+    client.chat_update(**slack_api.bodies.update_parent_message(game_info))
     requests.post(url=response_url, json={"delete_original": True})
     slack_api.producers.roll_with_player_message(game_info=game_info, username=username)
     return None
@@ -162,8 +169,9 @@ def roll_dice(game_info: dict, response_url: str, username: str) -> None:
 def steal_dice(game_info: dict, response_url: str, username: str) -> None:
     log.error("function does nothing yet")
     log.debug(response_url)
-    steal_response = dice10k.steal(
-        game_info["game_id"], game_info["users"][username]["user_id"]
+    requests.post(url=response_url, json={"delete_original": True})
+    steal_response = slack_api.producers.roll_with_player_message(
+        game_info=game_info, username=username, steal=True
     )
     log.error(steal_response)
     return steal_response
