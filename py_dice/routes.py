@@ -61,11 +61,15 @@ def start_api():
             return Response("", 200)
 
         elif action == "pick_die":
-            slack_api.actions.pick_dice(
-                game_info=game_state[payload["actions"][0]["block_id"]],
-                response_url=payload["response_url"],
-                username=payload["user"]["username"],
-                payload=payload,
+            log.error(payload)
+            game_id = payload["actions"][0]["block_id"]
+            game_state[game_id].update(
+                slack_api.actions.pick_dice(
+                    game_info=game_state[payload["actions"][0]["block_id"]],
+                    response_url=payload["response_url"],
+                    username=payload["user"]["username"],
+                    payload=payload,
+                )
             )
             return Response("", 200)
 
@@ -75,6 +79,17 @@ def start_api():
                 response_url=payload["response_url"],
                 username=payload["user"]["username"],
             )
+            return Response("", 200)
+
+        elif action == "steal_dice":
+            # TODO Add gobal stolen message
+            log.error(payload)
+            slack_api.actions.steal_dice(
+                game_info=game_state[payload["actions"][0]["value"]],
+                response_url=payload["response_url"],
+                username=payload["user"]["username"],
+            )
+
             return Response("", 200)
 
         elif action == "start_game":

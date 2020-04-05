@@ -2,7 +2,6 @@
 
 import os
 
-import requests
 import slack
 from logbook import Logger
 from py_dice import common, dice10k, slack_api

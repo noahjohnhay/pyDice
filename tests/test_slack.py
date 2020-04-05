@@ -1,4 +1,4 @@
-from py_dice import slack_api
+# from py_dice import slack_api
 
 goodOptions = {
     "blocks": [

@@ -124,6 +124,42 @@ def pass_roll_survey(
     return params
 
 
+def steal_roll_survey(game_info: dict, username: str) -> dict:
+    params = {
+        "blocks": [
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": f"@{username} would you like to steal or roll",
+                },
+            },
+            {
+                "type": "actions",
+                "elements": [
+                    {
+                        "type": "button",
+                        "action_id": "roll_dice",
+                        "text": {"type": "plain_text", "text": "Roll"},
+                        "value": game_info["game_id"],
+                    },
+                    {
+                        "type": "button",
+                        "action_id": "steal_dice",
+                        "text": {"type": "plain_text", "text": "STEAL"},
+                        "value": game_info["game_id"],
+                    },
+                ],
+            },
+        ],
+        "channel": game_info["channel"],
+        "thread_ts": game_info["parent_message_ts"],
+        "user": game_info["users"][username]["slack_id"],
+    }
+
+    return params
+
+
 def respond_in_thread(game_info: dict, message: str) -> dict:
     """
     Description:

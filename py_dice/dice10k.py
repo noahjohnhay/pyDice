@@ -50,6 +50,17 @@ def roll(game_id: str, user_id: str) -> dict:
     return response
 
 
+def steal(game_id: str, user_id: str) -> dict:
+    response = json.loads(
+        requests.post(
+            f"http://dice.calinfraser.com/games/{game_id}/players/{user_id}/roll",
+            json={"steal": True},
+        ).content
+    )
+    log.debug(f"Steal response: {response}")
+    return response
+
+
 def send_keepers(game_id: str, user_id: str, picks: list) -> dict:
     log.debug(f"{game_id} {user_id} {picks}")
     response = json.loads(
