@@ -2,6 +2,7 @@
 
 import os
 
+import requests
 import slack
 from logbook import Logger
 from py_dice import common, dice10k, slack_api
@@ -11,6 +12,13 @@ log = Logger(__name__)
 slack_token = os.environ["SLACK_API_TOKEN"]
 client = slack.WebClient(token=slack_token)
 log.debug("STARTING THE CLIENT AGAIN")
+
+
+auto_break = True
+
+
+def delete_message(channel: str, ts: str) -> None:
+    requests.post(url=ts, json={"delete_original": True})
 
 
 def roll_with_player_message(game_info: dict, username: str, steal: bool = False):
@@ -29,6 +37,14 @@ def roll_with_player_message(game_info: dict, username: str, steal: bool = False
                 username,
             )
         )
+        if auto_break and game_info["users"][username]["broken_int"] == 0:
+            slack_api.actions.pick_dice(
+                game_info=game_info,
+                message_id="1586140914.031800",
+                username=username,
+                roll=roll,
+            )
+
     elif roll_response["message"] == "You Busted!":
         next_player = roll_response["game-state"]["turn-player"]
         send_roll_message(game_info, username, "BUSTED!", roll)
@@ -40,7 +56,7 @@ def roll_with_player_message(game_info: dict, username: str, steal: bool = False
                 message="We encountered and error, Please try another time",
             )
         )
-        log.error("The API returned an unknown message for your roll")
+        log.warn("The API returned an unknown message for your roll")
     return ""
 
 

@@ -2,11 +2,12 @@
 
 import json
 import os
+from functools import reduce
 
 import slack
 from flask import Flask, Response, request
 from logbook import Logger
-from py_dice import dice10k, slack_api
+from py_dice import common, dice10k, slack_api
 
 log = Logger(__name__)
 slack_token = os.environ["SLACK_API_TOKEN"]
@@ -39,10 +40,11 @@ def start_api():
     def action_route() -> Response:
         payload = json.loads(request.form["payload"])
         action = payload["actions"][0]["action_id"]
-
+        delete_message_ts = payload["response_url"]
+        log.warn(payload)
         if action == "join_game":
             game_id = payload["actions"][0]["value"]
-            game_state[game_id]["message_ts"] = payload["message"]["ts"]
+            game_state[game_id]["message_ts"] = delete_message_ts
             game_state[game_id].update(
                 slack_api.actions.join_game(
                     game_info=game_state[game_id],
@@ -55,20 +57,24 @@ def start_api():
         elif action == "pass_dice":
             slack_api.actions.pass_dice(
                 game_info=game_state[payload["actions"][0]["value"]],
-                response_url=payload["response_url"],
+                message_id=delete_message_ts,
                 username=payload["user"]["username"],
             )
             return Response("", 200)
 
         elif action == "pick_die":
-            log.error(payload)
+            log.warn(payload)
             game_id = payload["actions"][0]["block_id"]
             game_state[game_id].update(
                 slack_api.actions.pick_dice(
                     game_info=game_state[payload["actions"][0]["block_id"]],
-                    response_url=payload["response_url"],
+                    message_id=delete_message_ts,
                     username=payload["user"]["username"],
-                    payload=payload,
+                    roll=reduce(
+                        common.fetch_die_val,
+                        payload["actions"][0]["selected_options"],
+                        [],
+                    ),
                 )
             )
             return Response("", 200)
@@ -76,17 +82,17 @@ def start_api():
         elif action == "roll_dice":
             slack_api.actions.roll_dice(
                 game_info=game_state[payload["actions"][0]["value"]],
-                response_url=payload["response_url"],
+                message_id=delete_message_ts,
                 username=payload["user"]["username"],
             )
             return Response("", 200)
 
         elif action == "steal_dice":
             # TODO Add gobal stolen message
-            log.error(payload)
+            log.warn(payload)
             slack_api.actions.steal_dice(
                 game_info=game_state[payload["actions"][0]["value"]],
-                response_url=payload["response_url"],
+                message_id=delete_message_ts,
                 username=payload["user"]["username"],
             )
 
@@ -102,7 +108,7 @@ def start_api():
             return Response("", 200)
 
         else:
-            log.error("Action not recognized")
+            log.warn("Action not recognized")
             return Response("", 404)
 
     @flask_app.route("/gamestate", methods=["POST"])

@@ -2,9 +2,7 @@
 
 import json
 import os
-from functools import reduce
 
-import requests
 import slack
 from logbook import Logger
 from py_dice import common, dice10k, slack_api
@@ -32,48 +30,18 @@ def join_game(game_info: dict, slack_user_id: str, username: str) -> dict:
     return game_info
 
 
-def pass_dice(game_info: dict, response_url: str, username: str) -> None:
-    """
-    Description:
-        Pass dice action
-    Args:
-        game_info: dict
-        response_url: str
-        username: str
-    Returns:
-        None
-    """
+def pass_dice(game_info: dict, message_id: str, username: str) -> None:
 
-    """
-    {
-       'message': 'Successful pass.',
-       'pending-points': 1000,
-       'game-state': {
-                    'game-id': '3c0771d4-b7bc-4580-9118-ab0d7349b738',
-                    'players': [{'name': 'jonathan.armel.daigle',
-                                    'turn-order': 0,
-                                     'points': 1000,
-                                     'turn-seq': 0,
-                                     'pending-points': 0,
-                                     'ice-broken?': True,
-                                     'roll-vec': []}],
-        'friendly-name':
-        'fragmentates wage',
-        'turn': 2,
-        'state': 'started',
-        'pending-points': 0,
-        'pending-dice': 6,
-        'turn-player': 'jonathan.armel.daigle'}}
-    """
-    log.error("Action: Pass Dice")
-    requests.post(url=response_url, json={"delete_original": True})
+    log.warn("Action: Pass Dice")
+    log.warn(message_id)
+    slack_api.producers.delete_message(channel=game_info["channel"], ts=message_id)
     response = dice10k.pass_turn(
         game_id=game_info["game_id"], user_id=game_info["users"][username]["user_id"]
     )
-    log.error(response)
+    log.warn(response)
     turn_player = response["game-state"]["turn-player"]
     steal_able = False
-    log.error(game_info)
+    log.warn(game_info)
     for x in response["game-state"]["players"]:
         if (
             x["name"] == turn_player
@@ -82,22 +50,21 @@ def pass_dice(game_info: dict, response_url: str, username: str) -> None:
         ):
             steal_able = True
     if steal_able:
-        log.error("Trigger steal message")
+        log.warn("Trigger steal message")
         client.chat_postEphemeral(
             **slack_api.bodies.steal_roll_survey(
                 game_info, response["game-state"]["turn-player"]
             )
         )
     else:
-        log.error(response)
+        log.warn(response)
         slack_api.producers.roll_with_player_message(game_info, turn_player)
     client.chat_update(**slack_api.bodies.update_parent_message(game_info))
     return None
 
 
-def pick_dice(game_info: dict, response_url: str, username: str, payload: dict):
+def pick_dice(game_info: dict, message_id: str, username: str, roll: list):
     log.debug("Action: Picked Dice")
-    roll = reduce(common.fetch_die_val, payload["actions"][0]["selected_options"], [])
     response = dice10k.send_keepers(
         game_info["game_id"], game_info["users"][username]["user_id"], roll
     )
@@ -119,22 +86,25 @@ def pick_dice(game_info: dict, response_url: str, username: str, payload: dict):
             )
         )
     else:
-        requests.post(url=response_url, json={"delete_original": True})
-        roll = common.format_dice_emojis(
-            reduce(common.fetch_die_val, payload["actions"][0]["selected_options"], [])
-        )
+        try:
+            slack_api.producers.delete_message(
+                channel=game_info["channel"], ts=message_id
+            )
+        except Exception as e:
+            log.warn(e)
+        formated_roll = common.format_dice_emojis(roll)
         client.chat_postMessage(
             **slack_api.bodies.respond_in_thread(
                 game_info,
                 f"@{username}\n"
-                f"Picked: {roll}\n"
+                f"Picked: {formated_roll}\n"
                 f"Pending Points: {response['pending-points']}\n"
                 f"Remaining Dice: {response['game-state']['pending-dice']}\n",
             )
         )
 
         if not (ice_broken or response.get("pending-points", 0) >= 1000):
-            roll_dice(game_info=game_info, response_url=response_url, username=username)
+            roll_dice(game_info=game_info, message_id=message_id, username=username)
         else:
             game_info["users"][username]["broken_int"] += 1
             client.chat_postEphemeral(
@@ -148,32 +118,27 @@ def pick_dice(game_info: dict, response_url: str, username: str, payload: dict):
     return game_info
 
 
-def roll_dice(game_info: dict, response_url: str, username: str) -> None:
-    """
-    Description:
-        Roll dice action
-    Args:
-        game_info: dict
-        response_url: str
-        username: str
-    Returns:
-        None
-    """
+def roll_dice(game_info: dict, message_id: str, username: str) -> None:
     log.debug("Action: Rolled Dice")
     client.chat_update(**slack_api.bodies.update_parent_message(game_info))
-    requests.post(url=response_url, json={"delete_original": True})
+    log.warn(message_id)
+    try:
+        slack_api.producers.delete_message(channel=game_info["channel"], ts=message_id)
+    except Exception as e:
+        log.warn(e)
     slack_api.producers.roll_with_player_message(game_info=game_info, username=username)
     return None
 
 
-def steal_dice(game_info: dict, response_url: str, username: str) -> None:
-    log.error("function does nothing yet")
-    log.debug(response_url)
-    requests.post(url=response_url, json={"delete_original": True})
+def steal_dice(game_info: dict, message_id: str, username: str) -> None:
+    log.warn("function does nothing yet")
+    slack_api.producers.delete_message(channel=game_info["channel"], ts=message_id)
+    # TODO fix this you fuck
+    # requests.post(url=response_url, json={"delete_original": True})
     steal_response = slack_api.producers.roll_with_player_message(
         game_info=game_info, username=username, steal=True
     )
-    log.error(steal_response)
+    log.warn(steal_response)
     return steal_response
 
 
@@ -187,6 +152,6 @@ def start_game(game_info: dict, response_url: str):
     response = client.chat_update(
         **slack_api.bodies.update_parent_message(game_info=game_info)
     )
-    log.error(response)
+    log.warn(response)
     slack_api.producers.roll_with_player_message(game_info, turn_player)
     return game_info
