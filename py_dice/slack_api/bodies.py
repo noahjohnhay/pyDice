@@ -84,9 +84,7 @@ def join_game_survey(channel_id: str, game_id: str, username: str) -> dict:
     return params
 
 
-def pass_roll_survey(
-    game_info: dict, username: str, response: dict, ice_broken: bool
-) -> dict:
+def pass_roll_survey(game_info: dict, username: str, can_pass: bool) -> dict:
     params = {
         "blocks": [
             {
@@ -112,7 +110,7 @@ def pass_roll_survey(
         "thread_ts": game_info["parent_message_ts"],
         "user": game_info["users"][username]["slack_id"],
     }
-    if ice_broken or response.get("pending-points", 0) >= 1000:
+    if can_pass:
         params["blocks"][1]["elements"].append(
             {
                 "type": "button",
@@ -161,15 +159,6 @@ def steal_roll_survey(game_info: dict, username: str) -> dict:
 
 
 def respond_in_thread(game_info: dict, message: str) -> dict:
-    """
-    Description:
-        Post message in thread
-    Args:
-        game_info: dict
-        message: str
-    Returns
-        dict - Response content from posting the message
-    """
     params = {
         "blocks": [
             {

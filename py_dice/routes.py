@@ -1,24 +1,20 @@
 # coding=utf-8
 
 import json
-import os
 from functools import reduce
 
-import slack
 from flask import Flask, Response, request
 from logbook import Logger
 from py_dice import common, dice10k, slack_api
 
 log = Logger(__name__)
-slack_token = os.environ["SLACK_API_TOKEN"]
-client = slack.WebClient(token=slack_token)
-log.debug("STARTING THE CLIENT AGAIN")
 
 
 def start_api():
     game_state = {}
     flask_app = Flask(__name__)
     flask_app.config["DEBUG"] = True
+    slack_client = slack_api.producers.create_client()
 
     @flask_app.route("/create", methods=["POST"])
     def create_game() -> Response:
@@ -26,7 +22,7 @@ def start_api():
         game_id = dice10k.create_game()["game-id"]
         game_state[game_id] = {"game_id": game_id, "users": {}}
         game_state[game_id]["channel"] = request.form["channel_id"]
-        response = client.chat_postMessage(
+        response = slack_client.chat_postMessage(
             **slack_api.bodies.join_game_survey(
                 channel_id=game_state[game_id]["channel"],
                 game_id=game_id,
@@ -41,12 +37,12 @@ def start_api():
         payload = json.loads(request.form["payload"])
         action = payload["actions"][0]["action_id"]
         delete_message_ts = payload["response_url"]
-        log.warn(payload)
         if action == "join_game":
             game_id = payload["actions"][0]["value"]
             game_state[game_id]["message_ts"] = delete_message_ts
             game_state[game_id].update(
                 slack_api.actions.join_game(
+                    slack_client=slack_client,
                     game_info=game_state[game_id],
                     slack_user_id=payload["user"]["id"],
                     username=payload["user"]["username"],
@@ -56,6 +52,7 @@ def start_api():
 
         elif action == "pass_dice":
             slack_api.actions.pass_dice(
+                slack_client=slack_client,
                 game_info=game_state[payload["actions"][0]["value"]],
                 message_id=delete_message_ts,
                 username=payload["user"]["username"],
@@ -63,14 +60,14 @@ def start_api():
             return Response("", 200)
 
         elif action == "pick_die":
-            log.warn(payload)
             game_id = payload["actions"][0]["block_id"]
             game_state[game_id].update(
                 slack_api.actions.pick_dice(
+                    slack_client=slack_client,
                     game_info=game_state[payload["actions"][0]["block_id"]],
                     message_id=delete_message_ts,
                     username=payload["user"]["username"],
-                    roll=reduce(
+                    picks=reduce(
                         common.fetch_die_val,
                         payload["actions"][0]["selected_options"],
                         [],
@@ -81,6 +78,7 @@ def start_api():
 
         elif action == "roll_dice":
             slack_api.actions.roll_dice(
+                slack_client=slack_client,
                 game_info=game_state[payload["actions"][0]["value"]],
                 message_id=delete_message_ts,
                 username=payload["user"]["username"],
@@ -88,21 +86,22 @@ def start_api():
             return Response("", 200)
 
         elif action == "steal_dice":
-            # TODO Add gobal stolen message
-            log.warn(payload)
+            # TODO Add global stolen message
             slack_api.actions.steal_dice(
+                slack_client=slack_client,
                 game_info=game_state[payload["actions"][0]["value"]],
                 message_id=delete_message_ts,
                 username=payload["user"]["username"],
             )
-
             return Response("", 200)
 
         elif action == "start_game":
             game_id = payload["actions"][0]["value"]
             game_state[game_id].update(
                 slack_api.actions.start_game(
-                    game_info=game_state[game_id], response_url=payload["response_url"]
+                    slack_client=slack_client,
+                    game_info=game_state[game_id],
+                    response_url=payload["response_url"],
                 )
             )
             return Response("", 200)
