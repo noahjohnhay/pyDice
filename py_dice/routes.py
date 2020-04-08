@@ -5,7 +5,7 @@ from functools import reduce
 
 from flask import Flask, Response, request
 from logbook import Logger
-from py_dice import common, dataclasses, dice10k, slack_api
+from py_dice import common, dcs, dice10k, slack_api
 
 log = Logger(__name__)
 
@@ -23,12 +23,12 @@ def start_api():
         game_state[game_id] = {"game_id": game_id, "users": {}}
         game_state[game_id]["channel"] = request.form["channel_id"]
         response = slack_client.chat_postMessage(
-            **dataclasses.message.create(
+            **dcs.message.create(
                 game_id=game_id,
                 channel_id=game_state[game_id]["channel"],
                 message=f"@{username} started a game, click to join:",
             )
-            .add_button(button_id=game_id, text="Join Game")
+            .add_button(game_id=game_id, text="Join Game", action_id="join_game")
             .add_start_game(game_id)
             .build()
         )
@@ -40,6 +40,7 @@ def start_api():
         payload = json.loads(request.form["payload"])
         action = payload["actions"][0]["action_id"]
         delete_message_ts = payload["response_url"]
+        log.error(payload)
         if action == "join_game":
             game_id = payload["actions"][0]["value"]
             game_state[game_id]["message_ts"] = delete_message_ts

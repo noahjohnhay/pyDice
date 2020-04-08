@@ -3,7 +3,7 @@
 from logbook import Logger
 
 import py_dice.slack_api.producers
-from py_dice import common, dataclasses, dice10k, slack_api
+from py_dice import common, dcs, dice10k, slack_api
 from slack import WebClient
 
 log = Logger(__name__)
@@ -20,7 +20,7 @@ def join_game(
             "broken_int": 0,
         }
         slack_client.chat_postMessage(
-            **dataclasses.message.create(
+            **dcs.message.create(
                 game_id=game_info["game_id"],
                 channel_id=game_info["channel"],
                 message=f"@{username} has successfully joined the game",
@@ -51,14 +51,14 @@ def pass_dice(
     if steal_able:
         log.warn("Trigger steal message")
         slack_client.chat_postEphemeral(
-            **dataclasses.message.create(
+            **dcs.message.create(
                 game_id=game_info["game_id"],
                 channel_id=game_info["channel"],
                 message=f"@{username} would you like to steal or roll",
             )
             .at_user(slack_id=game_info["users"][username]["slack_id"])
-            .add_button(button_id=game_info["game_id"], text="Roll")
-            .add_button(button_id=game_info["game_id"], text="Steal")
+            .add_button(game_id=game_info["game_id"], text="Roll", action_id="roll_dice")
+            .add_button(game_id=game_info["game_id"], text="Pass", action_id="pass_dice")
             .in_thread(thread_id=game_info["parent_message_ts"])
             .build()
         )
@@ -93,7 +93,7 @@ def pick_dice(
             break
     if response["message"] == "Must pick at least one scoring die":
         slack_client.chat_postMessage(
-            **dataclasses.message.create(
+            **dcs.message.create(
                 game_id=game_info["game_id"],
                 channel_id=game_info["channel"],
                 message=f"{response['message']}, try again: {common.format_dice_emojis(response['roll'])}",
@@ -106,7 +106,7 @@ def pick_dice(
     else:
         slack_api.producers.delete_message(channel=game_info["channel"], ts=message_id)
         slack_client.chat_postMessage(
-            **dataclasses.message.create(
+            **dcs.message.create(
                 game_id=game_info["game_id"],
                 channel_id=game_info["channel"],
                 message=f"@{username}\n"
@@ -128,13 +128,13 @@ def pick_dice(
         else:
             game_info["users"][username]["broken_int"] += 1
             slack_client.chat_postEphemeral(
-                **dataclasses.message.create(
+                **dcs.message.create(
                     game_id=game_info["game_id"],
                     channel_id=game_info["channel"],
                     message=f"@{username} would you like to roll or pass",
                 )
-                .add_button(button_id=game_info["game_id"], text="Roll")
-                .add_button(button_id=game_info["game_id"], text="Pass")
+                .add_button(game_id=game_info["game_id"], text="Roll", action_id="roll_dice")
+                .add_button(game_id=game_info["game_id"], text="Pass", action_id="pass_dice")
                 .at_user(slack_id=game_info["users"][username]["slack_id"])
                 .in_thread(thread_id=game_info["parent_message_ts"])
                 .build()

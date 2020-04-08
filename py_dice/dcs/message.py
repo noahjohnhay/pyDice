@@ -11,12 +11,13 @@ class Message:
     def build(self: Message) -> dict:
         return self.message
 
-    def add_button(self: Message, button_id: str, text: str) -> Message:
+    def add_button(self: Message, game_id: str, text: str, action_id: str) -> Message:
         has_action = False
         button = {
             "type": "button",
-            "action_id": button_id,
+            "action_id": action_id,
             "text": {"type": "plain_text", "text": text},
+            "value": game_id
         }
         for idx, block in enumerate(self.message["blocks"]):
             if block["type"] == "actions":

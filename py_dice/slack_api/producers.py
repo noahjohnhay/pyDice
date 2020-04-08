@@ -4,7 +4,7 @@ import os
 
 import requests
 from logbook import Logger
-from py_dice import common, dataclasses, dice10k, slack_api
+from py_dice import common, dcs, dice10k, slack_api
 from slack import WebClient
 
 log = Logger(__name__)
@@ -43,7 +43,7 @@ def roll_with_player_message(
             roll=roll,
         )
         slack_client.chat_postEphemeral(
-            **dataclasses.message.create(
+            **dcs.message.create(
                 game_info["game_id"],
                 game_info["channel"],
                 f"You rolled: {common.format_dice_emojis(roll)}",
@@ -75,7 +75,7 @@ def roll_with_player_message(
         )
     else:
         slack_client.chat_postMessage(
-            **dataclasses.message.create(
+            **dcs.message.create(
                 game_id=game_info["game_id"],
                 channel_id=game_info["channel"],
                 message="We encountered and error, Please try another time",
@@ -91,7 +91,7 @@ def send_roll_message(
     slack_client: WebClient, game_info: dict, username: str, action: str, roll
 ) -> None:
     slack_client.chat_postMessage(
-        **dataclasses.message.create(
+        **dcs.message.create(
             game_id=game_info["game_id"],
             channel_id=game_info["channel"],
             message=f"@{username} {action}: {common.format_dice_emojis(roll)}",
