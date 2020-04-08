@@ -11,21 +11,21 @@ class Message:
     def build(self: Message) -> dict:
         return self.message
 
-    def in_thread(self: Message, thread_id: str) -> Message:
-        self.message["message_ts"] = thread_id
-        return self
-
-    def pick_die(self: Message, roll_val: list) -> Message:
-        self.message["blocks"][0]["accessory"] = {
-            "action_id": "pick_die",
-            "type": "multi_static_select",
-            "placeholder": {"type": "plain_text", "text": "Pick to keep"},
-            "options": reduce(build_options, roll_val, []),
+    def add_button(self: Message, game_id: str, text: str, action_id: str) -> Message:
+        has_action = False
+        button = {
+            "type": "button",
+            "action_id": action_id,
+            "text": {"type": "plain_text", "text": text},
+            "value": game_id
         }
-        return self
+        for idx, block in enumerate(self.message["blocks"]):
+            if block["type"] == "actions":
+                self.message["blocks"][idx]["elements"].append(button)
+                has_action = True
 
-    def add_user(self: Message, user_id: str) -> Message:
-        self.message["user"] = user_id
+        if not has_action:
+            self.message["blocks"].append({"type": "actions", "elements": [button]})
         return self
 
     def add_start_game(self: Message, game_id: str) -> Message:
@@ -46,20 +46,21 @@ class Message:
         )
         return self
 
-    def add_button(self: Message, button_id: str, text: str) -> Message:
-        has_action = False
-        button = {
-            "type": "button",
-            "action_id": button_id,
-            "text": {"type": "plain_text", "text": text},
-        }
-        for idx, block in enumerate(self.message["blocks"]):
-            if block["type"] == "actions":
-                self.message["blocks"][idx]["elements"].append(button)
-                has_action = True
+    def at_user(self: Message, slack_id: str) -> Message:
+        self.message["user"] = slack_id
+        return self
 
-        if not has_action:
-            self.message["blocks"].append({"type": "actions", "elements": [button]})
+    def in_thread(self: Message, thread_id: str) -> Message:
+        self.message["thread_ts"] = thread_id
+        return self
+
+    def pick_die(self: Message, roll_val: list) -> Message:
+        self.message["blocks"][0]["accessory"] = {
+            "action_id": "pick_die",
+            "type": "multi_static_select",
+            "placeholder": {"type": "plain_text", "text": "Pick to keep"},
+            "options": reduce(build_options, roll_val, []),
+        }
         return self
 
 

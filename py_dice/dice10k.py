@@ -63,7 +63,7 @@ def send_keepers(game_id: str, user_id: str, picks: list) -> dict:
             json={"keepers": picks},
         ).content
     )
-    log.debug(f"keep response: {response}")
+    log.debug(f"Keep response: {response}")
     return response
 
 
@@ -73,5 +73,5 @@ def pass_turn(game_id: str, user_id: str) -> dict:
             f"http://dice.calinfraser.com/games/{game_id}/players/{user_id}/pass"
         ).content
     )
-    log.debug(f"pass response: {response}")
+    log.debug(f"Pass response: {response}")
     return response
