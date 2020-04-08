@@ -4,7 +4,7 @@ import os
 
 import requests
 from logbook import Logger
-from py_dice import common, dice10k, slack_api
+from py_dice import common, dataclasses, dice10k, slack_api
 from slack import WebClient
 
 log = Logger(__name__)
@@ -29,7 +29,9 @@ def roll_with_player_message(
     slack_client: WebClient, game_info: dict, username: str, steal: bool = False
 ) -> None:
     roll_response = dice10k.roll(
-        game_info["game_id"], game_info["users"][username]["user_id"], steal
+        game_id=game_info["game_id"],
+        user_id=game_info["users"][username]["user_id"],
+        steal=steal,
     )
     roll = roll_response["roll"]
     if roll_response["message"] == "Pick Keepers!":
@@ -41,13 +43,15 @@ def roll_with_player_message(
             roll=roll,
         )
         slack_client.chat_postEphemeral(
-            **slack_api.bodies.build_slack_message(
-                roll_val=roll,
-                message=f"You rolled: {common.format_dice_emojis(roll)}",
-                pickable=True,
-                game_info=game_info,
-                username=username,
+            **dataclasses.message.create(
+                game_info["game_id"],
+                game_info["channel"],
+                f"You rolled: {common.format_dice_emojis(roll)}",
             )
+            .at_user(slack_id=game_info["users"][username]["slack_id"])
+            .in_thread(thread_id=game_info["parent_message_ts"])
+            .pick_die(roll_val=roll)
+            .build()
         )
         if auto_break and game_info["users"][username]["broken_int"] == 0:
             slack_api.actions.pick_dice(
@@ -57,7 +61,6 @@ def roll_with_player_message(
                 username=username,
                 picks=roll,
             )
-
     elif roll_response["message"] == "You Busted!":
         next_player = roll_response["game-state"]["turn-player"]
         send_roll_message(
@@ -72,10 +75,13 @@ def roll_with_player_message(
         )
     else:
         slack_client.chat_postMessage(
-            **slack_api.bodies.respond_in_thread(
-                game_info=game_info,
+            **dataclasses.message.create(
+                game_id=game_info["game_id"],
+                channel_id=game_info["channel"],
                 message="We encountered and error, Please try another time",
             )
+            .in_thread(game_info["parent_message_ts"])
+            .build()
         )
         log.warn("The API returned an unknown message for your roll")
     return None
@@ -85,12 +91,40 @@ def send_roll_message(
     slack_client: WebClient, game_info: dict, username: str, action: str, roll
 ) -> None:
     slack_client.chat_postMessage(
-        **slack_api.bodies.build_slack_message(
-            roll_val=roll,
+        **dataclasses.message.create(
+            game_id=game_info["game_id"],
+            channel_id=game_info["channel"],
             message=f"@{username} {action}: {common.format_dice_emojis(roll)}",
-            pickable=False,
-            game_info=game_info,
-            username=username,
         )
+        .at_user(slack_id=game_info["users"][username]["slack_id"])
+        .in_thread(thread_id=game_info["parent_message_ts"])
+        .build()
     )
     return None
+
+
+def update_parent_message(game_info: dict) -> dict:
+    current_game_info = dice10k.fetch_game(game_info["game_id"])
+    scoreboard = ""
+    for user in current_game_info["players"]:
+        string = f"{user['name']}'s score: {user['points']}"
+        if user["ice-broken?"]:
+            string += f": *ICE BROKEN!*"
+        scoreboard += f"{string}\n"
+    params = {
+        "blocks": [
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": "*=====================================*\n"
+                    "*Game has started, follow in thread from now on*\n"
+                    f"{scoreboard}"
+                    "*=====================================*",
+                },
+            }
+        ],
+        "channel": game_info["channel"],
+        "ts": game_info["parent_message_ts"],
+    }
+    return params

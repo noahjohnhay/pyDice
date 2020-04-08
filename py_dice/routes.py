@@ -5,7 +5,7 @@ from functools import reduce
 
 from flask import Flask, Response, request
 from logbook import Logger
-from py_dice import common, dice10k, slack_api
+from py_dice import common, dataclasses, dice10k, slack_api
 
 log = Logger(__name__)
 
@@ -23,11 +23,14 @@ def start_api():
         game_state[game_id] = {"game_id": game_id, "users": {}}
         game_state[game_id]["channel"] = request.form["channel_id"]
         response = slack_client.chat_postMessage(
-            **slack_api.bodies.join_game_survey(
-                channel_id=game_state[game_id]["channel"],
+            **dataclasses.message.create(
                 game_id=game_id,
-                username=username,
+                channel_id=game_state[game_id]["channel"],
+                message=f"@{username} started a game, click to join:",
             )
+            .add_button(button_id=game_id, text="Join Game")
+            .add_start_game(game_id)
+            .build()
         )
         game_state[game_id]["parent_message_ts"] = response["ts"]
         return Response("", 200)
