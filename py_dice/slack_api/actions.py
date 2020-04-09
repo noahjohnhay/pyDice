@@ -56,9 +56,9 @@ def pass_dice(
                 channel_id=game_info["channel"],
                 message=f"@{username} would you like to steal or roll",
             )
-            .at_user(slack_id=game_info["users"][username]["slack_id"])
+            .at_user(slack_id=game_info["users"][turn_player]["slack_id"])
             .add_button(game_id=game_info["game_id"], text="Roll", action_id="roll_dice")
-            .add_button(game_id=game_info["game_id"], text="Pass", action_id="pass_dice")
+            .add_button(game_id=game_info["game_id"], text="Steal", action_id="steal_dice")
             .in_thread(thread_id=game_info["parent_message_ts"])
             .build()
         )
