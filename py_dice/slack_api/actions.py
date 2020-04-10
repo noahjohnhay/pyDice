@@ -41,6 +41,7 @@ def pass_dice(
     )
     turn_player = response["game-state"]["turn-player"]
     steal_able = False
+    # ToDO fucking make this better
     for x in response["game-state"]["players"]:
         if (
             x["name"] == turn_player
@@ -54,7 +55,7 @@ def pass_dice(
             **dcs.message.create(
                 game_id=game_info["game_id"],
                 channel_id=game_info["channel"],
-                message=f"@{username} would you like to steal or roll",
+                message=f"@{turn_player} would you like to steal or roll",
             )
             .at_user(slack_id=game_info["users"][turn_player]["slack_id"])
             .add_button(game_id=game_info["game_id"], text="Roll", action_id="roll_dice")
