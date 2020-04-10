@@ -96,7 +96,7 @@ def send_roll_message(
             channel_id=game_info["channel"],
             message=f"@{username} {action}: {common.format_dice_emojis(roll)}",
         )
-        .z (slack_id=game_info["users"][username]["slack_id"])
+        .at_user(slack_id=game_info["users"][username]["slack_id"])
         .in_thread(thread_id=game_info["parent_message_ts"])
         .build()
     )
@@ -108,7 +108,7 @@ def update_parent_message(game_info: dict) -> dict:
     scoreboard = ""
     for user in current_game_info["players"]:
         string = f"{user['name']}'s score: {user['points']}"
-        if user["ice-broken"]:
+        if user["ice-broken?"]:
             string += f": *ICE BROKEN!*"
         scoreboard += f"{string}\n"
     params = {
