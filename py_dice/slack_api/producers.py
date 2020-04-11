@@ -7,7 +7,7 @@ from py_dice import common, dcs, dice10k, slack_api
 from slack import WebClient
 
 log = Logger(__name__)
-auto_break = os.environ['auto_break', True]
+auto_break = os.getenv('auto_break', True)
 
 
 def create_client() -> WebClient:

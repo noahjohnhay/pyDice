@@ -34,6 +34,9 @@ def join_game(
 def pass_dice(
     slack_client: WebClient, game_info: dict, message_id: str, username: str
 ) -> None:
+    slack_client.chat_update(
+        **py_dice.slack_api.producers.update_parent_message(game_info=game_info)
+    )
     log.info("Action: Pass Dice")
     slack_api.producers.delete_message(channel=game_info["channel"], ts=message_id)
     response = dice10k.pass_turn(
@@ -67,9 +70,7 @@ def pass_dice(
         slack_api.producers.roll_with_player_message(
             slack_client=slack_client, game_info=game_info, username=turn_player
         )
-    slack_client.chat_update(
-        **py_dice.slack_api.producers.update_parent_message(game_info=game_info)
-    )
+
     return None
 
 
