@@ -161,8 +161,6 @@ def steal_dice(
     slack_client: WebClient, game_info: dict, message_id: str, username: str
 ) -> None:
     slack_api.producers.delete_message(channel=game_info["channel"], ts=message_id)
-    # TODO fix this you fuck
-    # requests.post(url=response_url, json={"delete_original": True})
     slack_api.producers.roll_with_player_message(
         slack_client=slack_client, game_info=game_info, username=username, steal=True
     )

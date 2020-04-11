@@ -1,14 +1,13 @@
 # coding=utf-8
 
 import os
-
 import requests
 from logbook import Logger
 from py_dice import common, dcs, dice10k, slack_api
 from slack import WebClient
 
 log = Logger(__name__)
-auto_break = True
+auto_break = os.environ['auto_break', True]
 
 
 def create_client() -> WebClient:
@@ -33,8 +32,8 @@ def roll_with_player_message(
         user_id=game_info["users"][username]["user_id"],
         steal=steal,
     )
-    roll = roll_response["roll"]
     if roll_response["message"] == "Pick Keepers!":
+        roll = roll_response["roll"]
         send_roll_message(
             slack_client=slack_client,
             game_info=game_info,
@@ -62,6 +61,7 @@ def roll_with_player_message(
                 picks=roll,
             )
     elif roll_response["message"] == "You Busted!":
+        roll = roll_response["roll"]
         next_player = roll_response["game-state"]["turn-player"]
         send_roll_message(
             slack_client=slack_client,
@@ -72,6 +72,19 @@ def roll_with_player_message(
         )
         roll_with_player_message(
             slack_client=slack_client, game_info=game_info, username=next_player
+        )
+        # not done. You can't steal, it'll put you over 10k
+    elif roll_response["message"] == "You can't steal, it'll put you over 10k":
+        slack_client.chat_postEphemeral(
+            **dcs.message.create(
+                game_id=game_info["game_id"],
+                channel_id=game_info["channel"],
+                message=f'{roll_response["message"]}',
+            )
+            .at_user(slack_id=game_info["users"][username]["slack_id"])
+            .add_button(game_id=game_info["game_id"], text="Roll", action_id="roll_dice")
+            .in_thread(thread_id=game_info["parent_message_ts"])
+            .build()
         )
     else:
         slack_client.chat_postMessage(
