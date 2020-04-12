@@ -29,7 +29,8 @@ def start_api():
                 message=f"@{username} started a game, click to join:",
             )
             .add_button(game_id=game_id, text="Join Game", action_id="join_game")
-            .add_start_game(game_id)
+            .add_start_game(game_id=game_id)
+            .add_start_game(game_id=game_id, auto_break=True)
             .build()
         )
         game_state[game_id]["parent_message_ts"] = response["ts"]
@@ -40,9 +41,8 @@ def start_api():
         payload = json.loads(request.form["payload"])
         action = payload["actions"][0]["action_id"]
         delete_message_ts = payload["response_url"]
-        log.error(payload)
+        game_id = common.get_game_id(payload)
         if action == "join_game":
-            game_id = payload["actions"][0]["value"]
             game_state[game_id]["message_ts"] = delete_message_ts
             game_state[game_id].update(
                 slack_api.actions.join_game(
@@ -57,18 +57,17 @@ def start_api():
         elif action == "pass_dice":
             slack_api.actions.pass_dice(
                 slack_client=slack_client,
-                game_info=game_state[payload["actions"][0]["value"]],
+                game_info=game_state[game_id],
                 message_id=delete_message_ts,
                 username=payload["user"]["username"],
             )
             return Response("", 200)
 
         elif action == "pick_die":
-            game_id = payload["actions"][0]["block_id"]
             game_state[game_id].update(
                 slack_api.actions.pick_dice(
                     slack_client=slack_client,
-                    game_info=game_state[payload["actions"][0]["block_id"]],
+                    game_info=game_state[game_id],
                     message_id=delete_message_ts,
                     username=payload["user"]["username"],
                     picks=reduce(
@@ -83,7 +82,7 @@ def start_api():
         elif action == "roll_dice":
             slack_api.actions.roll_dice(
                 slack_client=slack_client,
-                game_info=game_state[payload["actions"][0]["value"]],
+                game_info=game_state[game_id],
                 message_id=delete_message_ts,
                 username=payload["user"]["username"],
             )
@@ -91,21 +90,40 @@ def start_api():
 
         elif action == "steal_dice":
             # TODO Add global stolen message
+            slack_client.chat_postMessage(
+                **dcs.message.create(
+                    game_id=game_state[game_id],
+                    channel_id=game_state["channel"],
+                    message=f"{payload['user']['username']} is trying to steal",
+                )
+                .in_thread(game_state["message_ts"])
+                .build()
+            )
             slack_api.actions.steal_dice(
                 slack_client=slack_client,
-                game_info=game_state[payload["actions"][0]["value"]],
+                game_info=game_state[game_id],
                 message_id=delete_message_ts,
                 username=payload["user"]["username"],
             )
             return Response("", 200)
 
         elif action == "start_game":
-            game_id = payload["actions"][0]["value"]
             game_state[game_id].update(
                 slack_api.actions.start_game(
                     slack_client=slack_client,
                     game_info=game_state[game_id],
                     response_url=payload["response_url"],
+                    auto_break=False,
+                )
+            )
+            return Response("", 200)
+        elif action == "start_game_auto":
+            game_state[game_id].update(
+                slack_api.actions.start_game(
+                    slack_client=slack_client,
+                    game_info=game_state[game_id],
+                    response_url=payload["response_url"],
+                    auto_break=True,
                 )
             )
             return Response("", 200)

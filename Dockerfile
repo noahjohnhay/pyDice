@@ -3,5 +3,5 @@ COPY . /app
 WORKDIR /app
 RUN pip3 install pipenv
 RUN pipenv install --system --sequential
-EXPOSE 5000
+EXPOSE 3000
 CMD python -m py_dice

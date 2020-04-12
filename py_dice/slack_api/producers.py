@@ -1,13 +1,13 @@
 # coding=utf-8
 
 import os
+
 import requests
 from logbook import Logger
 from py_dice import common, dcs, dice10k, slack_api
 from slack import WebClient
 
 log = Logger(__name__)
-auto_break = os.getenv('auto_break', True)
 
 
 def create_client() -> WebClient:
@@ -19,8 +19,9 @@ def create_client() -> WebClient:
 def delete_message(channel: str, ts: str) -> None:
     try:
         requests.post(url=ts, json={"delete_original": True})
-    except Exception as e:
-        log.error(e)
+    except Exception:
+        # TODO Fix the invocations
+        return None
     return None
 
 
@@ -52,11 +53,11 @@ def roll_with_player_message(
             .pick_die(roll_val=roll)
             .build()
         )
-        if auto_break and game_info["users"][username]["broken_int"] == 0:
+        if game_info["auto_break"] and not game_info["users"][username]["robbable"]:
             slack_api.actions.pick_dice(
                 slack_client=slack_client,
                 game_info=game_info,
-                message_id="1586140914.031800",
+                message_id=game_info["parent_message_ts"],
                 username=username,
                 picks=roll,
             )
@@ -71,9 +72,12 @@ def roll_with_player_message(
             roll=roll,
         )
         roll_with_player_message(
-            slack_client=slack_client, game_info=game_info, username=next_player
+            slack_client=slack_client,
+            game_info=game_info,
+            username=next_player,
+            steal=False,
         )
-        # not done. You can't steal, it'll put you over 10k
+        # TODO not done. You can't steal, it'll put you over 10k
     elif roll_response["message"] == "You can't steal, it'll put you over 10k":
         slack_client.chat_postEphemeral(
             **dcs.message.create(
@@ -82,7 +86,9 @@ def roll_with_player_message(
                 message=f'{roll_response["message"]}',
             )
             .at_user(slack_id=game_info["users"][username]["slack_id"])
-            .add_button(game_id=game_info["game_id"], text="Roll", action_id="roll_dice")
+            .add_button(
+                game_id=game_info["game_id"], text="Roll", action_id="roll_dice"
+            )
             .in_thread(thread_id=game_info["parent_message_ts"])
             .build()
         )
