@@ -44,10 +44,11 @@ def start_api():
         game_id = common.get_game_id(payload)
         if common.is_game_over(game_id):
             # TODO: POST GAME OVER SUMMARY SEE OTHER TODO in update parent message
-            resp = slack_api.producers.update_parent_message(
-                game_info=game_state[game_id], state="completed"
+            slack_client.chat_update(
+                **slack_api.producers.update_parent_message(
+                    game_info=game_state[game_id], state="completed"
+                )
             )
-            log.info(resp)
             log.info("GAME OVER")
             return Response("", 200)
         elif action == "join_game":
@@ -63,8 +64,10 @@ def start_api():
             return Response("", 200)
 
         elif action == "pass_dice":
-            slack_api.producers.update_parent_message(
-                game_info=game_state[game_id], state="started"
+            slack_client.chat_update(
+                **slack_api.producers.update_parent_message(
+                    game_info=game_state[game_id], state="started"
+                )
             )
             slack_api.actions.pass_dice(
                 slack_client=slack_client,
@@ -93,8 +96,10 @@ def start_api():
             return Response("", 200)
 
         elif action == "roll_dice":
-            slack_api.producers.update_parent_message(
-                game_info=game_state[game_id], state="started"
+            slack_client.chat_update(
+                **slack_api.producers.update_parent_message(
+                    game_info=game_state[game_id], state="started"
+                )
             )
             slack_api.actions.roll_dice(
                 slack_client=slack_client,
@@ -105,6 +110,7 @@ def start_api():
             return Response("", 200)
 
         elif action == "steal_dice":
+            # TODO  You can't steal, it'll put you over 10k.
             slack_client.chat_postMessage(
                 **dcs.message.create(
                     game_id=game_state[game_id]["game_id"],

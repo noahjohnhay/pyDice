@@ -81,6 +81,7 @@ def is_game_over(game_id: str, winning_threshold: int = 3000) -> bool:
     players = dice10k.fetch_game(game_id).get("players", None)
     log.error(players)
     if players:
+        # TODO : catch if no one stole, and also make sure you don't present roll button is someone is gonna win
         if not who_can_steal(game_id):
             for player in players:
                 if player["points"] + player["pending-points"] == winning_threshold:
