@@ -42,7 +42,15 @@ def start_api():
         action = payload["actions"][0]["action_id"]
         delete_message_ts = payload["response_url"]
         game_id = common.get_game_id(payload)
-        if action == "join_game":
+        if common.is_game_over(game_id):
+            # TODO: POST GAME OVER SUMMARY SEE OTHER TODO in update parent message
+            resp = slack_api.producers.update_parent_message(
+                game_info=game_state[game_id], state="completed"
+            )
+            log.info(resp)
+            log.info("GAME OVER")
+            return Response("", 200)
+        elif action == "join_game":
             game_state[game_id]["message_ts"] = delete_message_ts
             game_state[game_id].update(
                 slack_api.actions.join_game(
@@ -55,6 +63,9 @@ def start_api():
             return Response("", 200)
 
         elif action == "pass_dice":
+            slack_api.producers.update_parent_message(
+                game_info=game_state[game_id], state="started"
+            )
             slack_api.actions.pass_dice(
                 slack_client=slack_client,
                 game_info=game_state[game_id],
@@ -64,6 +75,8 @@ def start_api():
             return Response("", 200)
 
         elif action == "pick_die":
+            log.info("GAME STATE")
+            log.info(game_state)
             game_state[game_id].update(
                 slack_api.actions.pick_dice(
                     slack_client=slack_client,
@@ -80,6 +93,9 @@ def start_api():
             return Response("", 200)
 
         elif action == "roll_dice":
+            slack_api.producers.update_parent_message(
+                game_info=game_state[game_id], state="started"
+            )
             slack_api.actions.roll_dice(
                 slack_client=slack_client,
                 game_info=game_state[game_id],
@@ -89,14 +105,13 @@ def start_api():
             return Response("", 200)
 
         elif action == "steal_dice":
-            # TODO Add global stolen message
             slack_client.chat_postMessage(
                 **dcs.message.create(
-                    game_id=game_state[game_id],
-                    channel_id=game_state["channel"],
+                    game_id=game_state[game_id]["game_id"],
+                    channel_id=game_state[game_id]["channel"],
                     message=f"{payload['user']['username']} is trying to steal",
                 )
-                .in_thread(game_state["message_ts"])
+                .in_thread(game_state[game_id]["parent_message_ts"])
                 .build()
             )
             slack_api.actions.steal_dice(
