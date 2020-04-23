@@ -36,19 +36,10 @@ def is_ice_broken():
 
 def who_can_steal(game_id: str, winning_threshold: int = 3000) -> list:
     players = dice10k.fetch_game(game_id)["players"]
-    # current_player = next(p for p in players if p["turn-order"] == 0)
-    # current_points = current_player["points"]
-    # ice_broken = current_player["ice-broken?"]
     if len(players) > 1:
         previous_player = next(p for p in players if p["turn-order"] == 1)
     else:
         previous_player = players[0]
-    # if len(players) > 1:
-    #     # If there is more than one player use previous players pending points
-    #     pending_points = previous_player["pending-points"]
-    # else:
-    #     # Else use your own pendings points
-    #     pending_points = current_player["pending-points"]
     matched_players = []
     for player in players:
         log.info(
@@ -69,7 +60,7 @@ def who_can_steal(game_id: str, winning_threshold: int = 3000) -> list:
             and player["ice-broken?"]
             # Previous player is robbable
             and is_robbable(game_id=game_id, username=previous_player["name"])
-            # Verify cuurent player has 1000 points
+            # Verify current player has 1000 points
             and bool(previous_player["points"] >= 1000)
         ):
             matched_players.append(player["name"])
@@ -81,7 +72,7 @@ def is_game_over(game_id: str, winning_threshold: int = 3000) -> bool:
     players = dice10k.fetch_game(game_id).get("players", None)
     log.error(players)
     if players:
-        # TODO : catch if no one stole, and also make sure you don't present roll button is someone is gonna win
+        # TODO: catch if no one stole, and also make sure you don't present roll button is someone is gonna win
         if not who_can_steal(game_id):
             for player in players:
                 if player["points"] + player["pending-points"] == winning_threshold:

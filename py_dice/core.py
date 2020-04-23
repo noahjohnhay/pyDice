@@ -4,7 +4,7 @@ import os
 
 import requests
 from logbook import Logger
-from py_dice import common, dcs, dice10k, slack_api
+from py_dice import actions, common, dcs, dice10k
 from slack import WebClient
 
 log = Logger(__name__)
@@ -16,12 +16,8 @@ def create_client() -> WebClient:
     return slack_client
 
 
-def delete_message(channel: str, ts: str) -> None:
-    try:
-        requests.post(url=ts, json={"delete_original": True})
-    except Exception:
-        # TODO Fix the invocations
-        return None
+def delete_message(response_url: str) -> None:
+    requests.post(url=response_url, json={"delete_original": True})
     return None
 
 
@@ -56,10 +52,10 @@ def roll_with_player_message(
         if game_info["auto_break"] and not common.is_robbable(
             game_info["game_id"], username
         ):
-            slack_api.actions.pick_dice(
+            actions.pick_dice(
                 slack_client=slack_client,
                 game_info=game_info,
-                message_id=game_info["parent_message_ts"],
+                response_url=game_info["parent_message_ts"],
                 username=username,
                 picks=roll,
             )
@@ -128,12 +124,14 @@ def update_parent_message(game_info: dict, state: str) -> dict:
     current_game_info = dice10k.fetch_game(game_info["game_id"])
     scoreboard = ""
     for user in current_game_info["players"]:
-        string = f"{user['name']}'s score: {user['points']}, pending {user['pending-points']} total {user['pending-points'] + user['points']}"
+        string = f"{user['name']}'s score: {user['points']}, " \
+                 f"pending {user['pending-points']} " \
+                 f"total {user['pending-points'] + user['points']}"
         if user["ice-broken?"]:
             string += f": *ICE BROKEN!*"
         scoreboard += f"{string}\n"
     log.info(state)
-    # TODO Recfactor
+    # TODO: refactor
     msg = f"*Game has {state}, follow in thread from now on*\n"
     if state == "completed":
         msg = f"*Game has {state}*\n"
