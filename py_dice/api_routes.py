@@ -44,11 +44,7 @@ def start_api():
 
         if common.is_game_over(game_id):
             # TODO: POST GAME OVER SUMMARY SEE OTHER TODO in update parent message
-            slack_client.chat_update(
-                **core.update_parent_message(
-                    game_info=game_state[game_id], state="completed"
-                )
-            )
+            core.build_game_panel(slack_client, game_state[game_id], state="completed")
             log.info("GAME OVER")
             return Response("", 200)
 
@@ -64,11 +60,7 @@ def start_api():
             return Response("", 200)
 
         elif action == "pass_dice":
-            slack_client.chat_update(
-                **core.update_parent_message(
-                    game_info=game_state[game_id], state="started"
-                )
-            )
+            core.build_game_panel(slack_client, game_state[game_id])
             actions.pass_dice(
                 slack_client=slack_client,
                 game_info=game_state[game_id],
@@ -78,6 +70,7 @@ def start_api():
             return Response("", 200)
 
         elif action == "pick_die":
+            core.build_game_panel(slack_client, game_state[game_id])
             game_state[game_id].update(
                 actions.pick_dice(
                     slack_client=slack_client,
@@ -94,11 +87,7 @@ def start_api():
             return Response("", 200)
 
         elif action == "roll_dice":
-            slack_client.chat_update(
-                **core.update_parent_message(
-                    game_info=game_state[game_id], state="started"
-                )
-            )
+            core.build_game_panel(slack_client, game_state[game_id])
             actions.roll_dice(
                 slack_client=slack_client,
                 game_info=game_state[game_id],

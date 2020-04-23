@@ -31,9 +31,10 @@ def join_game(
 def pass_dice(
     slack_client: WebClient, game_info: dict, response_url: str, username: str
 ) -> None:
-    slack_client.chat_update(
-        **core.update_parent_message(game_info=game_info, state="started")
-    )
+    core.build_game_panel(slack_client, game_info)
+    # slack_client.chat_update(
+    #     **core.update_parent_message(game_info=game_info)
+    # )
     log.info("Action: Pass Dice")
     core.delete_message(response_url=response_url)
     response = dice10k.pass_turn(
@@ -152,9 +153,7 @@ def roll_dice(
     slack_client: WebClient, game_info: dict, response_url: str, username: str
 ) -> None:
     log.info("Action: Rolled Dice")
-    slack_client.chat_update(
-        **core.update_parent_message(game_info=game_info, state="started")
-    )
+    core.build_game_panel(slack_client, game_info)
     core.delete_message(response_url=response_url)
     core.roll_with_player_message(
         slack_client=slack_client, game_info=game_info, username=username, steal=False
@@ -166,6 +165,7 @@ def steal_dice(
     slack_client: WebClient, game_info: dict, response_url: str, username: str
 ) -> None:
     core.delete_message(response_url=response_url)
+    core.build_game_panel(slack_client, game_info)
     core.roll_with_player_message(
         slack_client=slack_client, game_info=game_info, username=username, steal=True
     )
@@ -185,9 +185,7 @@ def start_game(
     start_response = dice10k.start_game(game_info["game_id"])
     turn_player = start_response["turn-player"]
     game_info["title_message_url"] = response_url
-    slack_client.chat_update(
-        **core.update_parent_message(game_info=game_info, state="started")
-    )
+    core.build_game_panel(slack_client, game_info)
     core.roll_with_player_message(
         slack_client=slack_client, game_info=game_info, username=turn_player
     )

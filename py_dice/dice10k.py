@@ -22,14 +22,16 @@ def fetch_game(game_id: str) -> dict:
 
 
 def start_game(game_id: str) -> dict:
-    response = json.loads(requests.put(f"{dice10k_url}/{game_id}/start").content)
+    response = json.loads(requests.put(f"{dice10k_url}/games/{game_id}/start").content)
     log.debug(f"Start game response: {json.dumps(response, indent=2)}")
     return response
 
 
 def add_player(game_id: str, name: str) -> dict:
     response = json.loads(
-        requests.post(f"{dice10k_url}/{game_id}/players", json={"name": name}).content
+        requests.post(
+            f"{dice10k_url}/games/{game_id}/players", json={"name": name}
+        ).content
     )
     log.debug(f"Add player response: {response}")
     return response

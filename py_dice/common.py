@@ -42,14 +42,14 @@ def who_can_steal(game_id: str, winning_threshold: int = 3000) -> list:
         previous_player = players[0]
     matched_players = []
     for player in players:
-        log.info(
-            f"{players} \n"
-            f"{player} \n"
-            f"{bool((previous_player['pending-points'] + player['points']) < winning_threshold)} \n"
-            f"{player['ice-broken?']}\n"
-            f"{is_robbable(game_id=game_id, username=previous_player['name'])}\n"
-            f"{bool(previous_player['points'] >= 1000)}"
-        )
+        # log.info(
+        #     f"{players} \n"
+        #     f"{player} \n"
+        #     f"{bool((previous_player['pending-points'] + player['points']) < winning_threshold)} \n"
+        #     f"{player['ice-broken?']}\n"
+        #     f"{is_robbable(game_id=game_id, username=previous_player['name'])}\n"
+        #     f"{bool(previous_player['points'] >= 1000)}"
+        # )
         if (
             # Total points won't put you over the winning threshold
             bool(
@@ -70,7 +70,7 @@ def who_can_steal(game_id: str, winning_threshold: int = 3000) -> list:
 
 def is_game_over(game_id: str, winning_threshold: int = 3000) -> bool:
     players = dice10k.fetch_game(game_id).get("players", None)
-    log.error(players)
+    log.info(players)
     if players:
         # TODO: catch if no one stole, and also make sure you don't present roll button is someone is gonna win
         if not who_can_steal(game_id):

@@ -4,6 +4,7 @@ import os
 
 import requests
 from logbook import Logger
+from prettytable import PrettyTable
 from py_dice import actions, common, dcs, dice10k
 from slack import WebClient
 
@@ -17,7 +18,10 @@ def create_client() -> WebClient:
 
 
 def delete_message(response_url: str) -> None:
-    requests.post(url=response_url, json={"delete_original": True})
+    try:
+        requests.post(url=response_url, json={"delete_original": True})
+    except Exception as e:
+        log.debug(e)
     return None
 
 
@@ -120,35 +124,36 @@ def send_roll_message(
     return None
 
 
-def update_parent_message(game_info: dict, state: str) -> dict:
-    current_game_info = dice10k.fetch_game(game_info["game_id"])
-    scoreboard = ""
-    for user in current_game_info["players"]:
-        string = f"{user['name']}'s score: {user['points']}, " \
-                 f"pending {user['pending-points']} " \
-                 f"total {user['pending-points'] + user['points']}"
-        if user["ice-broken?"]:
-            string += f": *ICE BROKEN!*"
-        scoreboard += f"{string}\n"
-    log.info(state)
-    # TODO: refactor
-    msg = f"*Game has {state}, follow in thread from now on*\n"
+def build_game_panel(slack_client, game_info: dict, state: str = "started") -> None:
+    players = dice10k.fetch_game(game_info["game_id"])["players"]
+    scoreboard = PrettyTable()
+    title = f"Game has {state}, follow in thread"
     if state == "completed":
-        msg = f"*Game has {state}*\n"
-    params = {
-        "blocks": [
-            {
-                "type": "section",
-                "text": {
-                    "type": "mrkdwn",
-                    "text": "*=====================================*\n"
-                    f"{msg}"
-                    f"{scoreboard}"
-                    "*=====================================*",
-                },
-            }
-        ],
-        "channel": game_info["channel"],
-        "ts": game_info["parent_message_ts"],
-    }
-    return params
+        title = f"Game has {state}"
+    scoreboard.field_names = [
+        "Player",
+        "Score",
+        "Pending Points",
+        "Possible Score",
+        "Ice Broken",
+    ]
+    scoreboard.title = title
+    for player in players:
+        scoreboard.add_row(
+            [
+                player["name"],
+                player["points"],
+                player["pending-points"],
+                player["pending-points"] + player["points"],
+                player["ice-broken?"],
+            ]
+        )
+    scoreboard = f"```{scoreboard}```"
+    print(scoreboard)
+    slack_client.chat_update(
+        ts=game_info["parent_message_ts"],
+        **dcs.message.create(
+            game_info["game_id"], game_info["channel"], scoreboard
+        ).build(),
+    )
+    return None
