@@ -3,7 +3,7 @@
 import sys
 
 from logbook import Logger, StreamHandler, compat
-from py_dice import routes
+from py_dice import api_routes
 
 if __name__ == "__main__":
     log = Logger(__name__)
@@ -14,4 +14,4 @@ if __name__ == "__main__":
     )
     compat.redirect_logging()
     handler.push_application()
-    routes.start_api()
+    api_routes.start_api()
