@@ -1,8 +1,7 @@
 # coding=utf-8
 
-from logbook import Logger
-
 import py_dice.slack_api.producers
+from logbook import Logger
 from py_dice import common, dcs, dice10k, slack_api
 from slack import WebClient
 
@@ -17,7 +16,6 @@ def join_game(
         game_info["users"][username] = {
             "user_id": dice10k.add_player(game_info["game_id"], username)["player-id"],
             "slack_id": slack_user_id,
-            "broken_int": 0,
         }
         slack_client.chat_postMessage(
             **dcs.message.create(
@@ -34,23 +32,18 @@ def join_game(
 def pass_dice(
     slack_client: WebClient, game_info: dict, message_id: str, username: str
 ) -> None:
+    slack_client.chat_update(
+        **py_dice.slack_api.producers.update_parent_message(
+            game_info=game_info, state="started"
+        )
+    )
     log.info("Action: Pass Dice")
     slack_api.producers.delete_message(channel=game_info["channel"], ts=message_id)
     response = dice10k.pass_turn(
         game_id=game_info["game_id"], user_id=game_info["users"][username]["user_id"]
     )
     turn_player = response["game-state"]["turn-player"]
-    steal_able = False
-    # ToDO fucking make this better
-    for x in response["game-state"]["players"]:
-        if (
-            x["name"] == turn_player
-            and x["ice-broken?"]
-            and game_info["users"][username]["broken_int"] > 1
-        ):
-            steal_able = True
-    if steal_able:
-        log.warn("Trigger steal message")
+    if turn_player in common.who_can_steal(game_info["game_id"]):
         slack_client.chat_postEphemeral(
             **dcs.message.create(
                 game_id=game_info["game_id"],
@@ -58,18 +51,23 @@ def pass_dice(
                 message=f"@{turn_player} would you like to steal or roll",
             )
             .at_user(slack_id=game_info["users"][turn_player]["slack_id"])
-            .add_button(game_id=game_info["game_id"], text="Roll", action_id="roll_dice")
-            .add_button(game_id=game_info["game_id"], text="Steal", action_id="steal_dice")
+            .add_button(
+                game_id=game_info["game_id"], text="Roll", action_id="roll_dice"
+            )
+            .add_button(
+                game_id=game_info["game_id"], text="Steal", action_id="steal_dice"
+            )
             .in_thread(thread_id=game_info["parent_message_ts"])
             .build()
         )
     else:
         slack_api.producers.roll_with_player_message(
-            slack_client=slack_client, game_info=game_info, username=turn_player
+            slack_client=slack_client,
+            game_info=game_info,
+            username=turn_player,
+            steal=False,
         )
-    slack_client.chat_update(
-        **py_dice.slack_api.producers.update_parent_message(game_info=game_info)
-    )
+
     return None
 
 
@@ -80,19 +78,13 @@ def pick_dice(
     username: str,
     picks: list,
 ):
-    log.debug("Action: Picked Dice")
+    log.info("Action: Picked Dice")
     response = dice10k.send_keepers(
         game_id=game_info["game_id"],
         user_id=game_info["users"][username]["user_id"],
         picks=picks,
     )
-    ice_broken = False
-    for x in response["game-state"]["players"]:
-        if x["name"] == username:
-            log.info("found ice state")
-            ice_broken = x["ice-broken?"]
-            break
-    if response["message"] == "Must pick at least one scoring die":
+    if response["message"].startswith("PICK FAIL"):
         slack_client.chat_postMessage(
             **dcs.message.create(
                 game_id=game_info["game_id"],
@@ -104,7 +96,19 @@ def pick_dice(
             .pick_die(roll_val=response["roll"])
             .build()
         )
+    elif response["message"].startswith("It's not your turn"):
+        players = dice10k.fetch_game(game_info["game_id"])["players"]
+        current_player = next(p for p in players if p["turn-order"] == 0)
+        slack_api.producers.roll_with_player_message(
+            slack_client=slack_client,
+            game_info=game_info,
+            username=current_player["name"],
+            steal=False,
+        )
     else:
+        ice_broken = next(
+            p for p in response["game-state"]["players"] if p["name"] == username
+        )["ice-broken?"]
         slack_api.producers.delete_message(channel=game_info["channel"], ts=message_id)
         slack_client.chat_postMessage(
             **dcs.message.create(
@@ -120,6 +124,7 @@ def pick_dice(
         )
 
         if not (ice_broken or response.get("pending-points", 0) >= 1000):
+
             roll_dice(
                 slack_client=slack_client,
                 game_info=game_info,
@@ -127,15 +132,18 @@ def pick_dice(
                 username=username,
             )
         else:
-            game_info["users"][username]["broken_int"] += 1
             slack_client.chat_postEphemeral(
                 **dcs.message.create(
                     game_id=game_info["game_id"],
                     channel_id=game_info["channel"],
                     message=f"@{username} would you like to roll or pass",
                 )
-                .add_button(game_id=game_info["game_id"], text="Roll", action_id="roll_dice")
-                .add_button(game_id=game_info["game_id"], text="Pass", action_id="pass_dice")
+                .add_button(
+                    game_id=game_info["game_id"], text="Roll", action_id="roll_dice"
+                )
+                .add_button(
+                    game_id=game_info["game_id"], text="Pass", action_id="pass_dice"
+                )
                 .at_user(slack_id=game_info["users"][username]["slack_id"])
                 .in_thread(thread_id=game_info["parent_message_ts"])
                 .build()
@@ -148,11 +156,13 @@ def roll_dice(
 ) -> None:
     log.info("Action: Rolled Dice")
     slack_client.chat_update(
-        **py_dice.slack_api.producers.update_parent_message(game_info=game_info)
+        **slack_api.producers.update_parent_message(
+            game_info=game_info, state="started"
+        )
     )
     slack_api.producers.delete_message(channel=game_info["channel"], ts=message_id)
     slack_api.producers.roll_with_player_message(
-        slack_client=slack_client, game_info=game_info, username=username
+        slack_client=slack_client, game_info=game_info, username=username, steal=False
     )
     return None
 
@@ -161,22 +171,32 @@ def steal_dice(
     slack_client: WebClient, game_info: dict, message_id: str, username: str
 ) -> None:
     slack_api.producers.delete_message(channel=game_info["channel"], ts=message_id)
-    # TODO fix this you fuck
-    # requests.post(url=response_url, json={"delete_original": True})
     slack_api.producers.roll_with_player_message(
         slack_client=slack_client, game_info=game_info, username=username, steal=True
     )
     return None
 
 
-def start_game(slack_client: WebClient, game_info: dict, response_url: str) -> dict:
+def start_game(
+    slack_client: WebClient,
+    game_info: dict,
+    response_url: str,
+    auto_break: bool = False,
+) -> dict:
+    if auto_break:
+        game_info["auto_break"] = True
+    else:
+        game_info["auto_break"] = False
     start_response = dice10k.start_game(game_info["game_id"])
     turn_player = start_response["turn-player"]
     game_info["title_message_url"] = response_url
     slack_client.chat_update(
-        **py_dice.slack_api.producers.update_parent_message(game_info=game_info)
+        **slack_api.producers.update_parent_message(
+            game_info=game_info, state="started"
+        )
     )
     slack_api.producers.roll_with_player_message(
         slack_client=slack_client, game_info=game_info, username=turn_player
     )
+
     return game_info

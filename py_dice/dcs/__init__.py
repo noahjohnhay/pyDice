@@ -1,5 +1,5 @@
 # coding=utf-8
 
-__all__ = ["game", "message"]
+__all__ = ["message"]
 
-from . import game, message
+from . import message

@@ -17,7 +17,7 @@ class Message:
             "type": "button",
             "action_id": action_id,
             "text": {"type": "plain_text", "text": text},
-            "value": game_id
+            "value": game_id,
         }
         for idx, block in enumerate(self.message["blocks"]):
             if block["type"] == "actions":
@@ -28,12 +28,21 @@ class Message:
             self.message["blocks"].append({"type": "actions", "elements": [button]})
         return self
 
-    def add_start_game(self: Message, game_id: str) -> Message:
+    def add_start_game(
+        self: Message, game_id: str, auto_break: bool = False
+    ) -> Message:
+        if auto_break:
+            action_id = "start_game_auto"
+            button_text = "Auto Break"
+        else:
+            action_id = "start_game"
+            button_text = "Start Game"
+
         self.message["blocks"][1]["elements"].append(
             {
                 "type": "button",
-                "action_id": "start_game",
-                "text": {"type": "plain_text", "text": "Start Game"},
+                "action_id": action_id,
+                "text": {"type": "plain_text", "text": button_text},
                 "style": "danger",
                 "confirm": {
                     "title": {"type": "plain_text", "text": "Are You Sure?"},

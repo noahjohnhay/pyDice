@@ -8,7 +8,6 @@ from py_dice import common, dcs, dice10k, slack_api
 from slack import WebClient
 
 log = Logger(__name__)
-auto_break = True
 
 
 def create_client() -> WebClient:
@@ -20,8 +19,9 @@ def create_client() -> WebClient:
 def delete_message(channel: str, ts: str) -> None:
     try:
         requests.post(url=ts, json={"delete_original": True})
-    except Exception as e:
-        log.error(e)
+    except Exception:
+        # TODO Fix the invocations
+        return None
     return None
 
 
@@ -33,8 +33,8 @@ def roll_with_player_message(
         user_id=game_info["users"][username]["user_id"],
         steal=steal,
     )
-    roll = roll_response["roll"]
     if roll_response["message"] == "Pick Keepers!":
+        roll = roll_response["roll"]
         send_roll_message(
             slack_client=slack_client,
             game_info=game_info,
@@ -53,15 +53,18 @@ def roll_with_player_message(
             .pick_die(roll_val=roll)
             .build()
         )
-        if auto_break and game_info["users"][username]["broken_int"] == 0:
+        if game_info["auto_break"] and not common.is_robbable(
+            game_info["game_id"], username
+        ):
             slack_api.actions.pick_dice(
                 slack_client=slack_client,
                 game_info=game_info,
-                message_id="1586140914.031800",
+                message_id=game_info["parent_message_ts"],
                 username=username,
                 picks=roll,
             )
-    elif roll_response["message"] == "You Busted!":
+    elif roll_response["message"].startswith("BUSTED"):
+        roll = roll_response["roll"]
         next_player = roll_response["game-state"]["turn-player"]
         send_roll_message(
             slack_client=slack_client,
@@ -71,7 +74,25 @@ def roll_with_player_message(
             roll=roll,
         )
         roll_with_player_message(
-            slack_client=slack_client, game_info=game_info, username=next_player
+            slack_client=slack_client,
+            game_info=game_info,
+            username=next_player,
+            steal=False,
+        )
+        # TODO not done. You can't steal, it'll put you over 10k
+    elif roll_response["message"] == "You can't steal, it'll put you over 10k":
+        slack_client.chat_postEphemeral(
+            **dcs.message.create(
+                game_id=game_info["game_id"],
+                channel_id=game_info["channel"],
+                message=f'{roll_response["message"]}',
+            )
+            .at_user(slack_id=game_info["users"][username]["slack_id"])
+            .add_button(
+                game_id=game_info["game_id"], text="Roll", action_id="roll_dice"
+            )
+            .in_thread(thread_id=game_info["parent_message_ts"])
+            .build()
         )
     else:
         slack_client.chat_postMessage(
@@ -103,14 +124,19 @@ def send_roll_message(
     return None
 
 
-def update_parent_message(game_info: dict) -> dict:
+def update_parent_message(game_info: dict, state: str) -> dict:
     current_game_info = dice10k.fetch_game(game_info["game_id"])
     scoreboard = ""
     for user in current_game_info["players"]:
-        string = f"{user['name']}'s score: {user['points']}"
+        string = f"{user['name']}'s score: {user['points']}, pending {user['pending-points']} total {user['pending-points'] + user['points']}"
         if user["ice-broken?"]:
             string += f": *ICE BROKEN!*"
         scoreboard += f"{string}\n"
+    log.info(state)
+    # TODO Recfactor
+    msg = f"*Game has {state}, follow in thread from now on*\n"
+    if state == "completed":
+        msg = f"*Game has {state}*\n"
     params = {
         "blocks": [
             {
@@ -118,7 +144,7 @@ def update_parent_message(game_info: dict) -> dict:
                 "text": {
                     "type": "mrkdwn",
                     "text": "*=====================================*\n"
-                    "*Game has started, follow in thread from now on*\n"
+                    f"{msg}"
                     f"{scoreboard}"
                     "*=====================================*",
                 },
