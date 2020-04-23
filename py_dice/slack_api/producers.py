@@ -133,7 +133,7 @@ def update_parent_message(game_info: dict, state: str) -> dict:
             string += f": *ICE BROKEN!*"
         scoreboard += f"{string}\n"
     log.info(state)
-    # TODO Recfactor, Error on game end state, not sure, but it does not want to update the parent message
+    # TODO Recfactor
     msg = f"*Game has {state}, follow in thread from now on*\n"
     if state == "completed":
         msg = f"*Game has {state}*\n"
