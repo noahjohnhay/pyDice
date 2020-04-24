@@ -41,10 +41,13 @@ def start_api():
         payload = json.loads(request.form["payload"])
         action = payload["actions"][0]["action_id"]
         game_id = common.get_game_id(payload)
+        game_info = game_state[game_id]
 
         if common.is_game_over(game_id):
             # TODO: POST GAME OVER SUMMARY SEE OTHER TODO in update parent message
-            core.build_game_panel(slack_client, game_state[game_id], state="completed")
+            core.build_game_panel(
+                slack_client=slack_client, game_info=game_info, state="completed"
+            )
             log.info("GAME OVER")
             return Response("", 200)
 
@@ -52,7 +55,7 @@ def start_api():
             game_state[game_id].update(
                 actions.join_game(
                     slack_client=slack_client,
-                    game_info=game_state[game_id],
+                    game_info=game_info,
                     slack_user_id=payload["user"]["id"],
                     username=payload["user"]["username"],
                 )
@@ -60,21 +63,21 @@ def start_api():
             return Response("", 200)
 
         elif action == "pass_dice":
-            core.build_game_panel(slack_client, game_state[game_id])
+            core.build_game_panel(slack_client=slack_client, game_info=game_info)
             actions.pass_dice(
                 slack_client=slack_client,
-                game_info=game_state[game_id],
+                game_info=game_info,
                 response_url=payload["response_url"],
                 username=payload["user"]["username"],
             )
             return Response("", 200)
 
         elif action == "pick_die":
-            core.build_game_panel(slack_client, game_state[game_id])
+            core.build_game_panel(slack_client=slack_client, game_info=game_info)
             game_state[game_id].update(
                 actions.pick_dice(
                     slack_client=slack_client,
-                    game_info=game_state[game_id],
+                    game_info=game_info,
                     response_url=payload["response_url"],
                     username=payload["user"]["username"],
                     picks=reduce(
@@ -87,10 +90,10 @@ def start_api():
             return Response("", 200)
 
         elif action == "roll_dice":
-            core.build_game_panel(slack_client, game_state[game_id])
+            core.build_game_panel(slack_client=slack_client, game_info=game_info)
             actions.roll_dice(
                 slack_client=slack_client,
-                game_info=game_state[game_id],
+                game_info=game_info,
                 response_url=payload["response_url"],
                 username=payload["user"]["username"],
             )
@@ -99,16 +102,16 @@ def start_api():
         elif action == "steal_dice":
             slack_client.chat_postMessage(
                 **dcs.message.create(
-                    game_id=game_state[game_id]["game_id"],
-                    channel_id=game_state[game_id]["channel"],
+                    game_id=game_info["game_id"],
+                    channel_id=game_info["channel"],
                     message=f"{payload['user']['username']} is trying to steal",
                 )
-                .in_thread(game_state[game_id]["parent_message_ts"])
+                .in_thread(thread_id=game_info["parent_message_ts"])
                 .build()
             )
             actions.steal_dice(
                 slack_client=slack_client,
-                game_info=game_state[game_id],
+                game_info=game_info,
                 response_url=payload["response_url"],
                 username=payload["user"]["username"],
             )
@@ -117,10 +120,7 @@ def start_api():
         elif action == "start_game":
             game_state[game_id].update(
                 actions.start_game(
-                    slack_client=slack_client,
-                    game_info=game_state[game_id],
-                    response_url=payload["response_url"],
-                    auto_break=False,
+                    slack_client=slack_client, game_info=game_info, auto_break=False
                 )
             )
             return Response("", 200)
@@ -128,10 +128,7 @@ def start_api():
         elif action == "start_game_auto":
             game_state[game_id].update(
                 actions.start_game(
-                    slack_client=slack_client,
-                    game_info=game_state[game_id],
-                    response_url=payload["response_url"],
-                    auto_break=True,
+                    slack_client=slack_client, game_info=game_info, auto_break=True
                 )
             )
             return Response("", 200)
@@ -142,7 +139,7 @@ def start_api():
 
     @flask_app.route("/gamestate", methods=["POST"])
     def game_state_fn() -> Response:
-        log.debug(f"Game State: {json.dumps(game_state, indent=2)}")
+        log.info(f"Game State: {json.dumps(game_state, indent=2)}")
         return Response(game_state, 200)
 
     flask_app.run()

@@ -28,25 +28,29 @@ def delete_message(response_url: str) -> None:
 def roll_with_player_message(
     slack_client: WebClient, game_info: dict, username: str, steal: bool = False
 ) -> None:
+
     roll_response = dice10k.roll(
         game_id=game_info["game_id"],
         user_id=game_info["users"][username]["user_id"],
         steal=steal,
     )
+
     if roll_response["message"] == "Pick Keepers!":
         roll = roll_response["roll"]
-        send_roll_message(
-            slack_client=slack_client,
-            game_info=game_info,
-            username=username,
-            action="rolled",
-            roll=roll,
+        slack_client.chat_postMessage(
+            **dcs.message.create(
+                game_id=game_info["game_id"],
+                channel_id=game_info["channel"],
+                message=f"@{username} rolled: {common.format_dice_emojis(roll)}",
+            )
+            .in_thread(thread_id=game_info["parent_message_ts"])
+            .build()
         )
         slack_client.chat_postEphemeral(
             **dcs.message.create(
-                game_info["game_id"],
-                game_info["channel"],
-                f"You rolled: {common.format_dice_emojis(roll)}",
+                game_id=game_info["game_id"],
+                channel_id=game_info["channel"],
+                message=f"You rolled: {common.format_dice_emojis(roll)}",
             )
             .at_user(slack_id=game_info["users"][username]["slack_id"])
             .in_thread(thread_id=game_info["parent_message_ts"])
@@ -63,15 +67,18 @@ def roll_with_player_message(
                 username=username,
                 picks=roll,
             )
+
     elif roll_response["message"].startswith("BUSTED"):
         roll = roll_response["roll"]
         next_player = roll_response["game-state"]["turn-player"]
-        send_roll_message(
-            slack_client=slack_client,
-            game_info=game_info,
-            username=username,
-            action="BUSTED!",
-            roll=roll,
+        slack_client.chat_postMessage(
+            **dcs.message.create(
+                game_id=game_info["game_id"],
+                channel_id=game_info["channel"],
+                message=f"@{username} BUSTED!: {common.format_dice_emojis(roll)}",
+            )
+            .in_thread(thread_id=game_info["parent_message_ts"])
+            .build()
         )
         roll_with_player_message(
             slack_client=slack_client,
@@ -79,13 +86,14 @@ def roll_with_player_message(
             username=next_player,
             steal=False,
         )
+
         # TODO not done. You can't steal, it'll put you over 10k
     elif roll_response["message"] == "You can't steal, it'll put you over 10k":
         slack_client.chat_postEphemeral(
             **dcs.message.create(
                 game_id=game_info["game_id"],
                 channel_id=game_info["channel"],
-                message=f'{roll_response["message"]}',
+                message=f"{roll_response['message']}",
             )
             .at_user(slack_id=game_info["users"][username]["slack_id"])
             .add_button(
@@ -94,6 +102,7 @@ def roll_with_player_message(
             .in_thread(thread_id=game_info["parent_message_ts"])
             .build()
         )
+
     else:
         slack_client.chat_postMessage(
             **dcs.message.create(
@@ -101,30 +110,16 @@ def roll_with_player_message(
                 channel_id=game_info["channel"],
                 message="We encountered and error, Please try another time",
             )
-            .in_thread(game_info["parent_message_ts"])
+            .in_thread(thread_id=game_info["parent_message_ts"])
             .build()
         )
         log.warn("The API returned an unknown message for your roll")
     return None
 
 
-def send_roll_message(
-    slack_client: WebClient, game_info: dict, username: str, action: str, roll
+def build_game_panel(
+    slack_client: WebClient, game_info: dict, state: str = "started"
 ) -> None:
-    slack_client.chat_postMessage(
-        **dcs.message.create(
-            game_id=game_info["game_id"],
-            channel_id=game_info["channel"],
-            message=f"@{username} {action}: {common.format_dice_emojis(roll)}",
-        )
-        .at_user(slack_id=game_info["users"][username]["slack_id"])
-        .in_thread(thread_id=game_info["parent_message_ts"])
-        .build()
-    )
-    return None
-
-
-def build_game_panel(slack_client, game_info: dict, state: str = "started") -> None:
     players = dice10k.fetch_game(game_info["game_id"])["players"]
     scoreboard = PrettyTable()
     title = f"Game has {state}, follow in thread"

@@ -30,10 +30,6 @@ def is_valid_uuid(uuid_to_test: str, version: int = 4) -> bool:
     return True
 
 
-def is_ice_broken():
-    return
-
-
 def who_can_steal(game_id: str, winning_threshold: int = 3000) -> list:
     players = dice10k.fetch_game(game_id)["players"]
     if len(players) > 1:
