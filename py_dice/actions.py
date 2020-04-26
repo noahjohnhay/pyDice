@@ -39,23 +39,23 @@ def pass_dice(
     )
     turn_player = response["game-state"]["turn-player"]
     if turn_player in common.who_can_steal(game_info["game_id"]):
-        slack_client.chat_postEphemeral(
-            **dcs.message.create(
+        message = (
+            dcs.message.create(
                 game_id=game_info["game_id"],
                 channel_id=game_info["channel"],
                 message=f"@{turn_player} would you like to steal or roll",
             )
             .at_user(slack_id=game_info["users"][turn_player]["slack_id"])
-            # TODO: add logic here for when to show or hide roll and steal
             .add_button(
                 game_id=game_info["game_id"], text="Roll", action_id="roll_dice"
             )
-            .add_button(
+            .in_thread(thread_id=game_info["parent_message_ts"])
+        )
+        if game_info["users"][username].get("ice_broken", False):
+            message.add_button(
                 game_id=game_info["game_id"], text="Steal", action_id="steal_dice"
             )
-            .in_thread(thread_id=game_info["parent_message_ts"])
-            .build()
-        )
+        slack_client.chat_postEphemeral(**message.build())
     else:
         core.roll_with_player_message(
             slack_client=slack_client,

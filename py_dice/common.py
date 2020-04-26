@@ -96,3 +96,15 @@ def is_robbable(game_id: str, username: str) -> bool:
         return True
     else:
         return False
+
+
+def is_broken(game_info: dict, username: str) -> bool:
+    if (
+        username in game_info["users"]
+        and "ice_broken" not in game_info["users"][username]
+    ):
+        players = dice10k.fetch_game(game_info["game_id"])["players"]
+        player_info = next(p for p in players if p["name"] == username)
+        if player_info["points"] >= 1000:
+            return True
+    return False

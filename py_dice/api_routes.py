@@ -42,6 +42,9 @@ def start_api():
         action = payload["actions"][0]["action_id"]
         game_id = common.get_game_id(payload)
         game_info = game_state[game_id]
+        username = payload["user"]["username"]
+        if common.is_broken(game_info, username):
+            game_state[game_id]["users"][username]["ice_broken"] = True
 
         if common.is_game_over(game_id):
             # TODO: POST GAME OVER SUMMARY SEE OTHER TODO in update parent message
@@ -57,7 +60,7 @@ def start_api():
                     slack_client=slack_client,
                     game_info=game_info,
                     slack_user_id=payload["user"]["id"],
-                    username=payload["user"]["username"],
+                    username=username,
                 )
             )
             return Response("", 200)
@@ -68,7 +71,7 @@ def start_api():
                 slack_client=slack_client,
                 game_info=game_info,
                 response_url=payload["response_url"],
-                username=payload["user"]["username"],
+                username=username,
             )
             return Response("", 200)
 
@@ -79,7 +82,7 @@ def start_api():
                     slack_client=slack_client,
                     game_info=game_info,
                     response_url=payload["response_url"],
-                    username=payload["user"]["username"],
+                    username=username,
                     picks=reduce(
                         common.fetch_die_val,
                         payload["actions"][0]["selected_options"],
@@ -95,7 +98,7 @@ def start_api():
                 slack_client=slack_client,
                 game_info=game_info,
                 response_url=payload["response_url"],
-                username=payload["user"]["username"],
+                username=username,
             )
             return Response("", 200)
 
@@ -113,7 +116,7 @@ def start_api():
                 slack_client=slack_client,
                 game_info=game_info,
                 response_url=payload["response_url"],
-                username=payload["user"]["username"],
+                username=username,
             )
             return Response("", 200)
 

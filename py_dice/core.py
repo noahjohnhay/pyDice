@@ -125,13 +125,7 @@ def build_game_panel(
     title = f"Game has {state}, follow in thread"
     if state == "completed":
         title = f"Game has {state}"
-    scoreboard.field_names = [
-        "Player",
-        "Score",
-        "Pending Points",
-        "Possible Score",
-        "Ice Broken",
-    ]
+    scoreboard.field_names = ["Player", "Score", "Pending", "Possible", "Ice Broken"]
     scoreboard.title = title
     for player in players:
         scoreboard.add_row(
@@ -144,7 +138,6 @@ def build_game_panel(
             ]
         )
     scoreboard = f"```{scoreboard}```"
-    print(scoreboard)
     slack_client.chat_update(
         ts=game_info["parent_message_ts"],
         **dcs.message.create(
