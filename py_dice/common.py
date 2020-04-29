@@ -143,7 +143,6 @@ def is_broken(game_info: dict, username: str) -> bool:
     return False
 
 
-# TODO: WHY IS THIS SHOWING CURENT PLAYER
 def is_previous_winnable(game_id: str) -> bool:
     players = dice10k.fetch_game(game_id)["players"]
     previous_player = next(p for p in players if p["turn-order"] == 0)

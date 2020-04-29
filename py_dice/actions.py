@@ -48,7 +48,6 @@ def pass_dice(
             .at_user(slack_id=game_info["users"][turn_player]["slack_id"])
             .in_thread(thread_id=game_info["parent_message_ts"])
         )
-        # TODO TESTING WONT PUT YOU OVER 10k
         if not common.is_previous_winnable(game_id=game_info["game_id"]):
             message.add_button(
                 game_id=game_info["game_id"], text="Roll", action_id="roll_dice"

@@ -91,7 +91,6 @@ def roll_with_player_message(
             steal=False,
         )
 
-        # TODO not done. You can't steal, it'll put you over 10k
     elif roll_response["message"] == "You can't steal, it'll put you over 10k":
         slack_client.chat_postEphemeral(
             **dcs.message.create(
