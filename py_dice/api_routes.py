@@ -46,11 +46,11 @@ def start_api():
         if common.is_broken(game_info, username):
             game_state[game_id]["users"][username]["ice_broken"] = True
 
-        if common.is_game_over(game_id):
-            # TODO: POST GAME OVER SUMMARY SEE OTHER TODO in update parent message
-            core.build_game_panel(
-                slack_client=slack_client, game_info=game_info, state="completed"
-            )
+        if common.is_game_over(
+            game_info=game_info,
+            slack_client=slack_client,
+            response_url=payload["response_url"],
+        ):
             log.info("GAME OVER")
             return Response("", 200)
 

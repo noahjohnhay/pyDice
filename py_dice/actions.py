@@ -20,7 +20,7 @@ def join_game(
             **dcs.message.create(
                 game_id=game_info["game_id"],
                 channel_id=game_info["channel"],
-                message=f"@{username} has successfully joined the game",
+                message=f"{username} has successfully joined the game",
             )
             .in_thread(thread_id=game_info["parent_message_ts"])
             .build()
@@ -43,15 +43,19 @@ def pass_dice(
             dcs.message.create(
                 game_id=game_info["game_id"],
                 channel_id=game_info["channel"],
-                message=f"@{turn_player} would you like to steal or roll",
+                message=f"@{turn_player}",
             )
             .at_user(slack_id=game_info["users"][turn_player]["slack_id"])
-            .add_button(
-                game_id=game_info["game_id"], text="Roll", action_id="roll_dice"
-            )
             .in_thread(thread_id=game_info["parent_message_ts"])
         )
-        if game_info["users"][username].get("ice_broken", False):
+        # TODO TESTING WONT PUT YOU OVER 10k
+        if not common.is_previous_winnable(game_id=game_info["game_id"]):
+            message.add_button(
+                game_id=game_info["game_id"], text="Roll", action_id="roll_dice"
+            )
+        if game_info["users"][username].get("ice_broken", False) and (
+            username in common.who_can_steal(game_id=game_info["game_id"])
+        ):
             message.add_button(
                 game_id=game_info["game_id"], text="Steal", action_id="steal_dice"
             )
@@ -80,11 +84,11 @@ def pick_dice(
         picks=picks,
     )
     if response["message"].startswith("PICK FAIL"):
-        slack_client.chat_postMessage(
+        slack_client.chat_postEphemeral(
             **dcs.message.create(
                 game_id=game_info["game_id"],
                 channel_id=game_info["channel"],
-                message=f"{response['message']}, try again: {common.format_dice_emojis(response['roll'])}",
+                message=f"Pick failed, try again \n {common.format_dice_emojis(response['roll'])}",
             )
             .at_user(slack_id=game_info["users"][username]["slack_id"])
             .in_thread(thread_id=game_info["parent_message_ts"])
@@ -109,9 +113,8 @@ def pick_dice(
             **dcs.message.create(
                 game_id=game_info["game_id"],
                 channel_id=game_info["channel"],
-                message=f"@{username}\n"
+                message=f"{username}\n"
                 f"Picked: {common.format_dice_emojis(picks)}\n"
-                f"Pending Points: {response['pending-points']}\n"
                 f"Remaining Dice: {response['game-state']['pending-dice']}\n",
             )
             .in_thread(thread_id=game_info["parent_message_ts"])
@@ -129,7 +132,7 @@ def pick_dice(
                 **dcs.message.create(
                     game_id=game_info["game_id"],
                     channel_id=game_info["channel"],
-                    message=f"@{username} would you like to roll or pass",
+                    message=f"@{username}",
                 )
                 .add_button(
                     game_id=game_info["game_id"], text="Roll", action_id="roll_dice"

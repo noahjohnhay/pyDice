@@ -3,7 +3,8 @@ from functools import reduce
 from uuid import UUID
 
 from logbook import Logger
-from py_dice import dice10k
+from py_dice import core, dcs, dice10k
+from slack import WebClient
 
 log = Logger(__name__)
 
@@ -31,26 +32,26 @@ def is_valid_uuid(uuid_to_test: str, version: int = 4) -> bool:
 
 
 def who_can_steal(game_id: str, winning_threshold: int = 3000) -> list:
-    players = dice10k.fetch_game(game_id)["players"]
+    dice10k_state = dice10k.fetch_game(game_id)
+    players = dice10k_state["players"]
     if len(players) > 1:
         previous_player = next(p for p in players if p["turn-order"] == 1)
     else:
         previous_player = players[0]
     matched_players = []
     for player in players:
-        # log.info(
-        #     f"{players} \n"
-        #     f"{player} \n"
-        #     f"{bool((previous_player['pending-points'] + player['points']) < winning_threshold)} \n"
-        #     f"{player['ice-broken?']}\n"
-        #     f"{is_robbable(game_id=game_id, username=previous_player['name'])}\n"
-        #     f"{bool(previous_player['points'] >= 1000)}"
-        # )
+        log.info(
+            f"{players} \n"
+            f"{player} \n"
+            f"{bool((dice10k_state['pending-points'] + player['points']) < winning_threshold)} \n"
+            f"{player['ice-broken?']}\n"
+            f"{is_robbable(game_id=game_id, username=previous_player['name'])}\n"
+            f"{bool(previous_player['points'] >= 1000)}"
+        )
         if (
             # Total points won't put you over the winning threshold
             bool(
-                (previous_player["pending-points"] + player["points"])
-                < winning_threshold
+                (dice10k_state["pending-points"] + player["points"]) < winning_threshold
             )
             # Current user broke the ice
             and player["ice-broken?"]
@@ -60,24 +61,56 @@ def who_can_steal(game_id: str, winning_threshold: int = 3000) -> list:
             and bool(previous_player["points"] >= 1000)
         ):
             matched_players.append(player["name"])
-    log.info(matched_players)
+    log.info(f"stealable players: {matched_players}")
     return matched_players
 
 
-def is_game_over(game_id: str, winning_threshold: int = 3000) -> bool:
-    players = dice10k.fetch_game(game_id).get("players", None)
-    log.info(players)
-    if players:
-        # TODO: catch if no one stole, and also make sure you don't present roll button is someone is gonna win
-        if not who_can_steal(game_id):
-            for player in players:
-                if player["points"] + player["pending-points"] == winning_threshold:
-                    log.info(f"{player['name']} has won")
-                    return True
-                elif player["points"] + player["pending-points"] > winning_threshold:
-                    log.exception(
-                        f"{player['name']} has somehow surpassed the winning threshold"
-                    )
+def game_over(
+    game_info: dict, slack_client: WebClient, winner: str, response_url: str = ""
+):
+    core.delete_message(response_url=response_url)
+    core.build_game_panel(
+        slack_client=slack_client, game_info=game_info, state="completed"
+    )
+    slack_client.chat_postMessage(
+        **dcs.message.create(
+            game_id=game_info["game_id"],
+            channel_id=game_info["channel"],
+            message=f"Game has completed @{winner} has won",
+        )
+        .in_thread(thread_id=game_info["parent_message_ts"])
+        .build()
+    )
+
+
+def is_game_over(
+    game_info: dict,
+    slack_client: WebClient,
+    response_url: str = "",
+    winning_threshold: int = 3000,
+) -> bool:
+    dice10k_state = dice10k.fetch_game(game_info["game_id"])
+    winner = ""
+    if dice10k_state.get("players", None):
+        for p in dice10k_state["players"]:
+            if p["points"] == winning_threshold:
+                winner = p["name"]
+            elif (p["points"] + p["pending-points"] == winning_threshold) and not (
+                who_can_steal(game_info["game_id"])
+            ):
+                winner = p["name"]
+            elif p["points"] + p["pending-points"] > winning_threshold:
+                log.exception(
+                    f"{p['name']} has somehow surpassed the winning threshold"
+                )
+    if winner:
+        game_over(
+            game_info=game_info,
+            slack_client=slack_client,
+            winner=winner,
+            response_url=response_url,
+        )
+        return True
     return False
 
 
@@ -107,4 +140,14 @@ def is_broken(game_info: dict, username: str) -> bool:
         player_info = next(p for p in players if p["name"] == username)
         if player_info["points"] >= 1000:
             return True
+    return False
+
+
+# TODO: WHY IS THIS SHOWING CURENT PLAYER
+def is_previous_winnable(game_id: str) -> bool:
+    players = dice10k.fetch_game(game_id)["players"]
+    previous_player = next(p for p in players if p["turn-order"] == 0)
+    log.info(f"is_winnable {previous_player}")
+    if previous_player["points"] + previous_player["pending-points"] == 3000:
+        return True
     return False

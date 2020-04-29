@@ -41,7 +41,7 @@ def roll_with_player_message(
             **dcs.message.create(
                 game_id=game_info["game_id"],
                 channel_id=game_info["channel"],
-                message=f"@{username} rolled: {common.format_dice_emojis(roll)}",
+                message=f"{username} rolled: {common.format_dice_emojis(roll)}",
             )
             .in_thread(thread_id=game_info["parent_message_ts"])
             .build()
@@ -57,6 +57,7 @@ def roll_with_player_message(
             .pick_die(roll_val=roll)
             .build()
         )
+        # TODO after broken forget about auto break
         if game_info["auto_break"] and not common.is_robbable(
             game_info["game_id"], username
         ):
@@ -69,13 +70,16 @@ def roll_with_player_message(
             )
 
     elif roll_response["message"].startswith("BUSTED"):
+        if common.is_game_over(game_info=game_info, slack_client=slack_client):
+            log.info("GAME OVER")
+            return
         roll = roll_response["roll"]
         next_player = roll_response["game-state"]["turn-player"]
         slack_client.chat_postMessage(
             **dcs.message.create(
                 game_id=game_info["game_id"],
                 channel_id=game_info["channel"],
-                message=f"@{username} BUSTED!: {common.format_dice_emojis(roll)}",
+                message=f"{username} BUSTED!: {common.format_dice_emojis(roll)}",
             )
             .in_thread(thread_id=game_info["parent_message_ts"])
             .build()
