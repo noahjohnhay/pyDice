@@ -27,7 +27,8 @@ def create_game() -> dict:
 
 @call_counter
 def fetch_game(game_id: str) -> dict:
-    # log.info(f"fetch_game counter: {fetch_game.calls}")
+    # TODO make this call less.
+    log.info(f"fetch_game counter: {fetch_game.calls}")
     response = json.loads(requests.get(f"{dice10k_url}/games/{game_id}").content)
     log.debug(f"Fetch game response: {json.dumps(response, indent=2)}")
     return response

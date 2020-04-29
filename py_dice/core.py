@@ -57,7 +57,6 @@ def roll_with_player_message(
             .pick_die(roll_val=roll)
             .build()
         )
-        # TODO after broken forget about auto break
         if game_info["auto_break"] and not common.is_robbable(
             game_info["game_id"], username
         ):
